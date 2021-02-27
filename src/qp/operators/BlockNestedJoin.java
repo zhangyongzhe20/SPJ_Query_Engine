@@ -11,6 +11,7 @@ import qp.utils.Tuple;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Queue;
 
 public class BlockNestedJoin extends Join {
 
@@ -20,7 +21,7 @@ public class BlockNestedJoin extends Join {
     ArrayList<Integer> rightindex;  // Indices of the join attributes in right table
     String rfname;                  // The file name where the right table is materialized
     Batch outbatch;                 // Buffer page for output
-    ArrayList<Batch> blocks;        // Block containing buffer pages
+    Queue<Batch> blocks;            // Block containing buffer pages
     Batch leftbatch;                // Buffer page for left input stream
     Batch rightbatch;               // Buffer page for right input stream
     ObjectInputStream in;           // File pointer to the right hand materialized file
@@ -104,9 +105,12 @@ public class BlockNestedJoin extends Join {
      **/
     public Batch next() {
         int i, j;
+
+        // TODO: Handle end of stream for left
         if (eosl) {
             return null;
         }
+
         outbatch = new Batch(batchsize);
         while (!outbatch.isFull()) {
             if (lcurs == 0 && eosr == true) {
@@ -116,16 +120,7 @@ public class BlockNestedJoin extends Join {
                     eosl = true;
                     return outbatch;
                 }
-                /** Whenever a new left page came, we have to start the
-                 ** scanning of right table
-                 **/
-                try {
-                    in = new ObjectInputStream(new FileInputStream(rfname));
-                    eosr = false;
-                } catch (IOException io) {
-                    System.err.println("NestedJoin:error in reading the file");
-                    System.exit(1);
-                }
+                startScanRightTableAtTop();
 
             }
             while (eosr == false) {
@@ -187,6 +182,19 @@ public class BlockNestedJoin extends Join {
         File f = new File(rfname);
         f.delete();
         return true;
+    }
+
+    private void startScanRightTableAtTop() {
+        /** Whenever a new left page came, we have to start the
+         ** scanning of right table
+         **/
+        try {
+            in = new ObjectInputStream(new FileInputStream(rfname));
+            eosr = false;
+        } catch (IOException io) {
+            System.err.println("NestedJoin:error in reading the file");
+            System.exit(1);
+        }
     }
 
 }
