@@ -149,11 +149,8 @@ public class BlockNestedJoin extends Join {
                             }
                             lcurs = 0;
                         }
-                        lcurs = 0;
                         blockcurs = 0;
                     }
-                    lcurs = 0;
-                    blockcurs = 0;
                     rcurs = 0;
                 } catch (EOFException e) {
                     // rightbatch will be size of 0 here
