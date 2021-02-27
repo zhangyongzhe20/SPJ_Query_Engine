@@ -20,6 +20,7 @@ public class BlockNestedJoin extends Join {
     ArrayList<Integer> rightindex;  // Indices of the join attributes in right table
     String rfname;                  // The file name where the right table is materialized
     Batch outbatch;                 // Buffer page for output
+    ArrayList<Batch> blocks;        // Block containing buffer pages
     Batch leftbatch;                // Buffer page for left input stream
     Batch rightbatch;               // Buffer page for right input stream
     ObjectInputStream in;           // File pointer to the right hand materialized file
