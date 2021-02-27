@@ -48,6 +48,8 @@ public class BlockNestedJoin extends Join {
         int tuplesize = schema.getTupleSize();
         batchsize = Batch.getPageSize() / tuplesize;
 
+        blocks = new ArrayList<>(numBuff - 2);
+
         /** find indices attributes of join conditions **/
         leftindex = new ArrayList<>();
         rightindex = new ArrayList<>();
@@ -60,9 +62,9 @@ public class BlockNestedJoin extends Join {
         Batch rightpage;
 
         /** initialize the cursors of input buffers **/
-        lcurs = -1;
-        blockcurs = -1;
-        rcurs = -1;
+        lcurs = 0;
+        blockcurs = 0;
+        rcurs = 0;
         eosl = false;
         /** because right stream is to be repetitively scanned
          ** if it reached end, we have to start new scan
@@ -106,16 +108,18 @@ public class BlockNestedJoin extends Join {
      **/
     public Batch next() {
 
+        if (eosr && eosl) {
+            return null;
+        }
+
         outbatch = new Batch(batchsize);
 
         while (!outbatch.isFull()) {
 
             // tops up block to max or if EOF left reached
-            if (!eosl && lcurs + blockcurs + rcurs == -3) {
+            if (!eosl && lcurs + blockcurs + rcurs == 0) {
                 startScanRightTableAtTop();
                 setBlock();
-                lcurs = 0;
-                blockcurs = 0;
             }
 
             if (blocks.size() < numBuff - 2) {
@@ -123,57 +127,61 @@ public class BlockNestedJoin extends Join {
                 eosl = true;
             }
 
-            try {
-                // TODO: Handle end of stream for right
-                if (!eosr && rcurs < 0) { // will create a bug if rcurs == 0 after 1 loop then read in next right page without considering remaining tuples in first right page.
-                    // especially when there is high number of matches with the 0th tuple in a page
-                    rightbatch = (Batch) in.readObject();
-                    rcurs = 0;
-                }
-            } catch (EOFException e) {
+            while (!eosr) {
                 try {
-                    in.close();
+                    // TODO: Handle end of stream for right
+                    if (lcurs + blockcurs + rcurs == 0) { // will create a bug if rcurs == 0 after 1 loop then read in next right page without considering remaining tuples in first right page.
+                        // especially when there is high number of matches with the 0th tuple in a page
+                        rightbatch = (Batch) in.readObject();
+                    }
+                } catch (EOFException e) {
+                    // rightbatch will be size of 0 here
+                    try {
+                        in.close();
+                    } catch (IOException io) {
+                        System.out.println("NestedJoin: Error in reading temporary file");
+                    }
+                    eosr = true;
+                    return outbatch;
+                } catch (ClassNotFoundException c) {
+                    System.out.println("NestedJoin: Error in deserialising temporary file ");
+                    System.exit(1);
                 } catch (IOException io) {
-                    Debug.PPrint(rightbatch);
                     System.out.println("NestedJoin: Error in reading temporary file");
+                    System.exit(1);
                 }
-                eosr = true; // do we really care about EOF right?
-            } catch (ClassNotFoundException c) {
-                System.out.println("NestedJoin: Error in deserialising temporary file ");
-                System.exit(1);
-            } catch (IOException io) {
-                System.out.println("NestedJoin: Error in reading temporary file");
-                System.exit(1);
-            }
 
-            for (int i = rcurs; i < rightbatch.size(); ++i) {
-                Tuple righttuple = rightbatch.get(i);
+                for (int i = rcurs; i < rightbatch.size(); ++i) {
+                    Tuple righttuple = rightbatch.get(i);
 
-                for (int j = blockcurs; j < blocks.size(); j++) {
-                    leftbatch = blocks.get(j);
+                    for (int j = blockcurs; j < blocks.size(); j++) {
+                        leftbatch = blocks.get(j);
 
-                    for (int k = lcurs; k < leftbatch.size(); k++) {
-                        Tuple lefttuple = leftbatch.get(k);
+                        for (int k = lcurs; k < leftbatch.size(); k++) {
+                            Tuple lefttuple = leftbatch.get(k);
 
-                        if (lefttuple.checkJoin(righttuple, leftindex, rightindex)) {
-                            Tuple outtuple = lefttuple.joinWith(righttuple);
-                            outbatch.add(outtuple);
+                            if (lefttuple.checkJoin(righttuple, leftindex, rightindex)) {
+                                Tuple outtuple = lefttuple.joinWith(righttuple);
+                                outbatch.add(outtuple);
 
-                            if (outbatch.isFull()) {
-                                modifyPointers(i, j, k);
-                                return outbatch;
+                                Debug.PPrint(outbatch);
+
+                                if (outbatch.isFull()) {
+                                    storePointers(i, j, k);
+                                    return outbatch;
+                                }
                             }
                         }
+                        lcurs = 0;
+
                     }
                     lcurs = 0;
-
+                    blockcurs = 0;
                 }
                 lcurs = 0;
                 blockcurs = 0;
+                rcurs = 0;
             }
-            lcurs = -1;
-            blockcurs = -1;
-            rcurs = -1;
         }
         return outbatch;
     }
@@ -187,7 +195,7 @@ public class BlockNestedJoin extends Join {
         return true;
     }
 
-    private void modifyPointers(int right, int block, int left) {
+    private void storePointers(int right, int block, int left) {
 
         if (right == rightbatch.size() - 1 && block == blocks.size() - 1 && left == leftbatch.size() - 1) {
             // end of right, end of left
