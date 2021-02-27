@@ -11,7 +11,6 @@ import qp.utils.Tuple;
 
 import java.io.*;
 import java.util.ArrayList;
-import java.util.Queue;
 
 public class BlockNestedJoin extends Join {
 
@@ -61,9 +60,9 @@ public class BlockNestedJoin extends Join {
         Batch rightpage;
 
         /** initialize the cursors of input buffers **/
-        lcurs = 0;
-        blockcurs = 0;
-        rcurs = 0;
+        lcurs = -1;
+        blockcurs = -1;
+        rcurs = -1;
         eosl = false;
         /** because right stream is to be repetitively scanned
          ** if it reached end, we have to start new scan
@@ -81,7 +80,7 @@ public class BlockNestedJoin extends Join {
              ** into a file
              **/
             filenum++;
-            rfname = "NJtemp-" + String.valueOf(filenum);
+            rfname = "BNJtemp-" + String.valueOf(filenum);
             try {
                 ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(rfname));
                 while ((rightpage = right.next()) != null) {
@@ -107,40 +106,38 @@ public class BlockNestedJoin extends Join {
      **/
     public Batch next() {
 
-        // TODO: Handle end of stream for left
-
-        // tops up block to max or if EOF reached
-        if (!eosl && blocks.isEmpty()) {
-            do {
-                Batch b = left.next();
-                if (b == null) {
-                    break;
-                }
-                blocks.add(b);
-            } while(blocks.size() < numBuff - 2);
-        }
-
-        if (blocks.size() < numBuff - 2) {
-            System.out.println("EOF Left reached");
-            eosl = true;
-        }
-
         outbatch = new Batch(batchsize);
 
         while (!outbatch.isFull()) {
 
-            startScanRightTableAtTop();
-            // now what if rcurs = 0?
+            // tops up block to max or if EOF left reached
+            if (!eosl && lcurs + blockcurs + rcurs == -3) {
+                startScanRightTableAtTop();
+                setBlock();
+                lcurs = 0;
+                blockcurs = 0;
+            }
+
+            if (blocks.size() < numBuff - 2) {
+                System.out.println("EOF Left reached");
+                eosl = true;
+            }
 
             try {
-                rightbatch = (Batch) in.readObject();
+                // TODO: Handle end of stream for right
+                if (!eosr && rcurs < 0) { // will create a bug if rcurs == 0 after 1 loop then read in next right page without considering remaining tuples in first right page.
+                    // especially when there is high number of matches with the 0th tuple in a page
+                    rightbatch = (Batch) in.readObject();
+                    rcurs = 0;
+                }
             } catch (EOFException e) {
                 try {
                     in.close();
                 } catch (IOException io) {
+                    Debug.PPrint(rightbatch);
                     System.out.println("NestedJoin: Error in reading temporary file");
                 }
-                eosr = true;
+                eosr = true; // do we really care about EOF right?
             } catch (ClassNotFoundException c) {
                 System.out.println("NestedJoin: Error in deserialising temporary file ");
                 System.exit(1);
@@ -149,7 +146,6 @@ public class BlockNestedJoin extends Join {
                 System.exit(1);
             }
 
-            // rcurs not 0. Explain.
             for (int i = rcurs; i < rightbatch.size(); ++i) {
                 Tuple righttuple = rightbatch.get(i);
 
@@ -169,8 +165,15 @@ public class BlockNestedJoin extends Join {
                             }
                         }
                     }
+                    lcurs = 0;
+
                 }
+                lcurs = 0;
+                blockcurs = 0;
             }
+            lcurs = -1;
+            blockcurs = -1;
+            rcurs = -1;
         }
         return outbatch;
     }
@@ -188,9 +191,9 @@ public class BlockNestedJoin extends Join {
 
         if (right == rightbatch.size() - 1 && block == blocks.size() - 1 && left == leftbatch.size() - 1) {
             // end of right, end of left
-            lcurs = 0;
-            blockcurs = 0;
-            rcurs = 0;
+            lcurs = -1;
+            blockcurs = -1;
+            rcurs = -1;
         } else if (right == rightbatch.size() - 1 && block == blocks.size() - 1 && left != leftbatch.size() - 1) {
             // end of right, middle of left
             lcurs = left + 1;
@@ -229,6 +232,17 @@ public class BlockNestedJoin extends Join {
         } else {
             System.out.printf("Unknown combination right=%d, block=%d, left=%d\n", right, block, left);
         }
+    }
+
+    private void setBlock() {
+        blocks.clear();
+        do {
+            Batch b = left.next();
+            if (b == null) {
+                break;
+            }
+            blocks.add(b);
+        } while(blocks.size() < numBuff - 2);
     }
 
     private void startScanRightTableAtTop() {
