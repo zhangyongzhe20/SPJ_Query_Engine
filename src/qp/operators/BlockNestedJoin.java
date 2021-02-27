@@ -21,7 +21,7 @@ public class BlockNestedJoin extends Join {
     ArrayList<Integer> rightindex;  // Indices of the join attributes in right table
     String rfname;                  // The file name where the right table is materialized
     Batch outbatch;                 // Buffer page for output
-    Queue<Batch> blocks;            // Block containing buffer pages
+    ArrayList<Batch> blocks;        // Block containing buffer pages
     Batch leftbatch;                // Buffer page for left input stream
     Batch rightbatch;               // Buffer page for right input stream
     ObjectInputStream in;           // File pointer to the right hand materialized file
@@ -111,8 +111,26 @@ public class BlockNestedJoin extends Join {
             return null;
         }
 
+        // attempt to fill up
+        if (blocks.peek() == null) {
+            Batch b = left.next();
+            int max = numBuff - 2;
+            while(blocks.size() < max) {
+                if (b == null) {
+                    break;
+                }
+                blocks.add(b);
+                b = left.next();
+            }
+        }
+        // blocks may have any number of batches between 0 to numBuff - 2
+
+
         outbatch = new Batch(batchsize);
         while (!outbatch.isFull()) {
+
+
+
             if (lcurs == 0 && eosr == true) {
                 /** new left page is to be fetched**/
                 leftbatch = (Batch) left.next();
