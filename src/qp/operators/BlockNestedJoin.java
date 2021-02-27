@@ -62,6 +62,7 @@ public class BlockNestedJoin extends Join {
 
         /** initialize the cursors of input buffers **/
         lcurs = 0;
+        blockcurs = 0;
         rcurs = 0;
         eosl = false;
         /** because right stream is to be repetitively scanned
@@ -105,89 +106,69 @@ public class BlockNestedJoin extends Join {
      * * And returns a page of output tuples
      **/
     public Batch next() {
-        int i, j;
 
         // TODO: Handle end of stream for left
-        if (eosl) {
-            return null;
-        }
 
-        // attempt to fill up
-        if (blocks.peek() == null) {
-            Batch b = left.next();
-            int max = numBuff - 2;
-            while(blocks.size() < max) {
+        // tops up block to max or if EOF reached
+        if (!eosl && blocks.isEmpty()) {
+            do {
+                Batch b = left.next();
                 if (b == null) {
                     break;
                 }
                 blocks.add(b);
-                b = left.next();
-            }
+            } while(blocks.size() < numBuff - 2);
         }
-        // blocks may have any number of batches between 0 to numBuff - 2
 
+        if (blocks.size() < numBuff - 2) {
+            System.out.println("EOF Left reached");
+            eosl = true;
+        }
 
         outbatch = new Batch(batchsize);
+
         while (!outbatch.isFull()) {
 
+            startScanRightTableAtTop();
+            // now what if rcurs = 0?
 
-
-            if (lcurs == 0 && eosr == true) {
-                /** new left page is to be fetched**/
-                leftbatch = (Batch) left.next();
-                if (leftbatch == null) {
-                    eosl = true;
-                    return outbatch;
-                }
-                startScanRightTableAtTop();
-
-            }
-            while (eosr == false) {
+            try {
+                rightbatch = (Batch) in.readObject();
+            } catch (EOFException e) {
                 try {
-                    if (rcurs == 0 && lcurs == 0) {
-                        rightbatch = (Batch) in.readObject();
-                    }
-                    for (i = lcurs; i < leftbatch.size(); ++i) {
-                        for (j = rcurs; j < rightbatch.size(); ++j) {
-                            Tuple lefttuple = leftbatch.get(i);
-                            Tuple righttuple = rightbatch.get(j);
-                            if (lefttuple.checkJoin(righttuple, leftindex, rightindex)) {
-                                Tuple outtuple = lefttuple.joinWith(righttuple);
-                                outbatch.add(outtuple);
-                                if (outbatch.isFull()) {
-                                    if (i == leftbatch.size() - 1 && j == rightbatch.size() - 1) {  //case 1
-                                        lcurs = 0;
-                                        rcurs = 0;
-                                    } else if (i != leftbatch.size() - 1 && j == rightbatch.size() - 1) {  //case 2
-                                        lcurs = i + 1;
-                                        rcurs = 0;
-                                    } else if (i == leftbatch.size() - 1 && j != rightbatch.size() - 1) {  //case 3
-                                        lcurs = i;
-                                        rcurs = j + 1;
-                                    } else {
-                                        lcurs = i;
-                                        rcurs = j + 1;
-                                    }
-                                    return outbatch;
-                                }
-                            }
-                        }
-                        rcurs = 0;
-                    }
-                    lcurs = 0;
-                } catch (EOFException e) {
-                    try {
-                        in.close();
-                    } catch (IOException io) {
-                        System.out.println("NestedJoin: Error in reading temporary file");
-                    }
-                    eosr = true;
-                } catch (ClassNotFoundException c) {
-                    System.out.println("NestedJoin: Error in deserialising temporary file ");
-                    System.exit(1);
+                    in.close();
                 } catch (IOException io) {
                     System.out.println("NestedJoin: Error in reading temporary file");
-                    System.exit(1);
+                }
+                eosr = true;
+            } catch (ClassNotFoundException c) {
+                System.out.println("NestedJoin: Error in deserialising temporary file ");
+                System.exit(1);
+            } catch (IOException io) {
+                System.out.println("NestedJoin: Error in reading temporary file");
+                System.exit(1);
+            }
+
+            // rcurs not 0. Explain.
+            for (int i = rcurs; i < rightbatch.size(); ++i) {
+                Tuple righttuple = rightbatch.get(i);
+
+                for (int j = blockcurs; j < blocks.size(); j++) {
+                    leftbatch = blocks.get(j);
+
+                    for (int k = lcurs; k < leftbatch.size(); k++) {
+                        Tuple lefttuple = leftbatch.get(k);
+
+                        if (lefttuple.checkJoin(righttuple, leftindex, rightindex)) {
+                            Tuple outtuple = lefttuple.joinWith(righttuple);
+                            outbatch.add(outtuple);
+
+                            if (outbatch.isFull()) {
+                                modifyPointers(i, j, k);
+                                return outbatch;
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -201,6 +182,53 @@ public class BlockNestedJoin extends Join {
         File f = new File(rfname);
         f.delete();
         return true;
+    }
+
+    private void modifyPointers(int right, int block, int left) {
+
+        if (right == rightbatch.size() - 1 && block == blocks.size() - 1 && left == leftbatch.size() - 1) {
+            // end of right, end of left
+            lcurs = 0;
+            blockcurs = 0;
+            rcurs = 0;
+        } else if (right == rightbatch.size() - 1 && block == blocks.size() - 1 && left != leftbatch.size() - 1) {
+            // end of right, middle of left
+            lcurs = left + 1;
+            blockcurs = block;
+            rcurs = right;
+        } else if (right == rightbatch.size() - 1 && block != blocks.size() - 1 && left == leftbatch.size() - 1) {
+            // end of right, middle of left
+            lcurs = 0;
+            blockcurs = block + 1;
+            rcurs = right;
+        } else if (right == rightbatch.size() - 1 && block != blocks.size() - 1 && left != leftbatch.size() - 1) {
+            // end of right, middle of left
+            lcurs = left + 1;
+            blockcurs = block;
+            rcurs = right;
+        } else if (right != rightbatch.size() - 1 && block == blocks.size() - 1 && left == leftbatch.size() - 1) {
+            // middle of right, end of left
+            lcurs = 0;
+            blockcurs = 0;
+            rcurs = right + 1;
+        } else if (right != rightbatch.size() - 1 && block == blocks.size() - 1 && left != leftbatch.size() - 1) {
+            // middle of right, middle of left
+            lcurs = left + 1;
+            blockcurs = block;
+            rcurs = right;
+        } else if (right != rightbatch.size() - 1 && block != blocks.size() - 1 && left == leftbatch.size() - 1) {
+            // middle of right, middle of left
+            lcurs = 0;
+            blockcurs = block + 1;
+            rcurs = right;
+        } else if (right != rightbatch.size() - 1 && block != blocks.size() - 1 && left != leftbatch.size() - 1) {
+            // middle of right, middle of left
+            lcurs = left + 1;
+            blockcurs = block;
+            rcurs = right;
+        } else {
+            System.out.printf("Unknown combination right=%d, block=%d, left=%d\n", right, block, left);
+        }
     }
 
     private void startScanRightTableAtTop() {
