@@ -1,5 +1,5 @@
 /**
- * Page Nested Join algorithm
+ * Block Nested Join algorithm
  **/
 
 package qp.operators;
@@ -72,7 +72,7 @@ public class BlockNestedJoin extends Join {
         eosr = true;
 
         /** Right hand side table is to be materialized
-         ** for the Nested join to perform
+         ** for the Block Nested join to perform
          **/
         if (!right.open()) {
             return false;
@@ -90,7 +90,7 @@ public class BlockNestedJoin extends Join {
                 }
                 out.close();
             } catch (IOException io) {
-                System.out.println("NestedJoin: Error writing to temporary file");
+                System.out.println("BlockNestedJoin: Error writing to temporary file");
                 return false;
             }
             if (!right.close())
@@ -107,80 +107,69 @@ public class BlockNestedJoin extends Join {
      * * And returns a page of output tuples
      **/
     public Batch next() {
-
         if (eosr && eosl) {
             return null;
         }
-
         outbatch = new Batch(batchsize);
-
         while (!outbatch.isFull()) {
 
-            // tops up block to max or if EOF left reached
-            if (!eosl && lcurs + blockcurs + rcurs == 0) {
-                startScanRightTableAtTop();
-                setBlock();
+            if (eosr && eosl) {
+                return outbatch;
             }
 
+            // tops up block to max or if EOF left reached
+            if (!eosl && lcurs == 0 && blockcurs == 0 && rcurs == 0) {
+                startScanRightTableAtTop(); // eosr set true here
+                setBlock();
+            }
             if (blocks.size() < numBuff - 2) {
-                System.out.println("EOF Left reached");
                 eosl = true;
             }
 
             while (!eosr) {
                 try {
-                    // TODO: Handle end of stream for right
-                    if (lcurs + blockcurs + rcurs == 0) { // will create a bug if rcurs == 0 after 1 loop then read in next right page without considering remaining tuples in first right page.
-                        // especially when there is high number of matches with the 0th tuple in a page
+                    if (lcurs == 0 && blockcurs == 0 && rcurs == 0) {
                         rightbatch = (Batch) in.readObject();
                     }
+
+                    for (int i = rcurs; i < rightbatch.size(); ++i) {
+                        Tuple righttuple = rightbatch.get(i);
+                        for (int j = blockcurs; j < blocks.size(); j++) {
+                            leftbatch = blocks.get(j);
+                            for (int k = lcurs; k < leftbatch.size(); k++) {
+                                Tuple lefttuple = leftbatch.get(k);
+                                if (lefttuple.checkJoin(righttuple, leftindex, rightindex)) {
+                                    Tuple outtuple = lefttuple.joinWith(righttuple);
+                                    outbatch.add(outtuple);
+                                    if (outbatch.isFull()) {
+                                        storePointers(i, j, k);
+                                        return outbatch;
+                                    }
+                                }
+                            }
+                            lcurs = 0;
+                        }
+                        lcurs = 0;
+                        blockcurs = 0;
+                    }
+                    lcurs = 0;
+                    blockcurs = 0;
+                    rcurs = 0;
                 } catch (EOFException e) {
                     // rightbatch will be size of 0 here
                     try {
                         in.close();
                     } catch (IOException io) {
-                        System.out.println("NestedJoin: Error in reading temporary file");
+                        System.out.println("BlockNestedJoin: Error in reading temporary file");
                     }
                     eosr = true;
-                    return outbatch;
                 } catch (ClassNotFoundException c) {
-                    System.out.println("NestedJoin: Error in deserialising temporary file ");
+                    System.out.println("BlockNestedJoin: Error in deserialising temporary file ");
                     System.exit(1);
                 } catch (IOException io) {
-                    System.out.println("NestedJoin: Error in reading temporary file");
+                    System.out.println("BlockNestedJoin: Error in reading temporary file");
                     System.exit(1);
                 }
-
-                for (int i = rcurs; i < rightbatch.size(); ++i) {
-                    Tuple righttuple = rightbatch.get(i);
-
-                    for (int j = blockcurs; j < blocks.size(); j++) {
-                        leftbatch = blocks.get(j);
-
-                        for (int k = lcurs; k < leftbatch.size(); k++) {
-                            Tuple lefttuple = leftbatch.get(k);
-
-                            if (lefttuple.checkJoin(righttuple, leftindex, rightindex)) {
-                                Tuple outtuple = lefttuple.joinWith(righttuple);
-                                outbatch.add(outtuple);
-
-                                Debug.PPrint(outbatch);
-
-                                if (outbatch.isFull()) {
-                                    storePointers(i, j, k);
-                                    return outbatch;
-                                }
-                            }
-                        }
-                        lcurs = 0;
-
-                    }
-                    lcurs = 0;
-                    blockcurs = 0;
-                }
-                lcurs = 0;
-                blockcurs = 0;
-                rcurs = 0;
             }
         }
         return outbatch;
@@ -199,9 +188,9 @@ public class BlockNestedJoin extends Join {
 
         if (right == rightbatch.size() - 1 && block == blocks.size() - 1 && left == leftbatch.size() - 1) {
             // end of right, end of left
-            lcurs = -1;
-            blockcurs = -1;
-            rcurs = -1;
+            lcurs = 0;
+            blockcurs = 0;
+            rcurs = 0;
         } else if (right == rightbatch.size() - 1 && block == blocks.size() - 1 && left != leftbatch.size() - 1) {
             // end of right, middle of left
             lcurs = left + 1;
@@ -261,7 +250,7 @@ public class BlockNestedJoin extends Join {
             in = new ObjectInputStream(new FileInputStream(rfname));
             eosr = false;
         } catch (IOException io) {
-            System.err.println("NestedJoin:error in reading the file");
+            System.err.println("BlockNestedJoin:error in reading the file");
             System.exit(1);
         }
     }
