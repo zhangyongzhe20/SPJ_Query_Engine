@@ -27,6 +27,7 @@ public class BlockNestedJoin extends Join {
     ObjectInputStream in;           // File pointer to the right hand materialized file
 
     int lcurs;                      // Cursor for left side buffer
+    int blockcurs;                  // Cursor for blocks
     int rcurs;                      // Cursor for right side buffer
     boolean eosl;                   // Whether end of stream (left table) is reached
     boolean eosr;                   // Whether end of stream (right table) is reached
