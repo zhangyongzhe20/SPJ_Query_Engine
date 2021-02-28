@@ -159,7 +159,13 @@ STRING_LITERAL=\"{CHAR}*\"
 }
 
 
+<YYINITIAL,NEGATE> DESC {
 
+  yybegin(YYINITIAL);
+
+  return new Symbol(sym.DESC,yyline,yychar,new TokenValue(yytext()));
+
+}
 
 
 
