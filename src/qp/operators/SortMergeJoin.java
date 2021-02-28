@@ -51,7 +51,6 @@ public class SortMergeJoin extends Join{
      */
     @Override
     public boolean open(){
-        //TODO: External sort here
         left.open();
         right.open();
         //calculate the batch size
@@ -173,21 +172,21 @@ public class SortMergeJoin extends Join{
     }
 
 
-    public static void main(String[] args) {
-        //node is the query plan
-        Operator node = null;
-        int numOfBuff = 3;
-        SortMergeJoin smj = new SortMergeJoin((Join) node);
-
-        //TODO: external merge sort for left batch
-        //List<Attribute> leftAttrs = new ArrayList<>();
-        //leftAttrs.add(smj.getCondition().getLhs());
-        //smj.setLeft(new externalMergeSort(left, leftAttrs, numOfBuff));
-        //TODO: external merge sort for right batch
-        //List<Attribute> rightAttrs = new ArrayList<>();
-        //rightAttrs.add((Attribute) smj.getCondition().getRhs());
-        //smj.setRight(new externalMergeSort(right, rightAttrs, numOfBuff));
-
-        smj.setNumBuff(numOfBuff);
-    }
+//    public static void main(String[] args) {
+//        //node is the query plan
+//        Operator node = null;
+//        int numOfBuff = 3;
+//        SortMergeJoin smj = new SortMergeJoin((Join) node);
+//
+//        //external merge sort for left batch
+//        //List<Attribute> leftAttrs = new ArrayList<>();
+//        //leftAttrs.add(smj.getCondition().getLhs());
+//        //smj.setLeft(new externalMergeSort(left, leftAttrs, numOfBuff));
+//        //external merge sort for right batch
+//        //List<Attribute> rightAttrs = new ArrayList<>();
+//        //rightAttrs.add((Attribute) smj.getCondition().getRhs());
+//        //smj.setRight(new externalMergeSort(right, rightAttrs, numOfBuff));
+//
+//        smj.setNumBuff(numOfBuff);
+//    }
 }

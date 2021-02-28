@@ -61,6 +61,20 @@ public class RandomOptimizer {
                     bnj.setRight(right);
                     bnj.setNumBuff(numbuff);
                     return bnj;
+                case JoinType.SORTMERGE:
+                    SortMergeJoin smj = new SortMergeJoin((Join) node);
+
+//                    //TODO: external merge sort for left batch
+//                    ArrayList<Attribute> leftAttrs = new ArrayList<>();
+//                    leftAttrs.add(smj.getCondition().getLhs());
+//                    smj.setLeft(new externalMergeSort(left, leftAttrs, numbuff));
+//                    //TODO: external merge sort for right batch
+//                    ArrayList<Attribute> rightAttrs = new ArrayList<>();
+//                    rightAttrs.add((Attribute) smj.getCondition().getRhs());
+//                    smj.setRight(new externalMergeSort(right, rightAttrs, numbuff));
+
+                    smj.setNumBuff(numbuff);
+
                 default:
                     return node;
             }
