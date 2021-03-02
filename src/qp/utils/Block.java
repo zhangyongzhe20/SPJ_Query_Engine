@@ -46,8 +46,12 @@ public class Block implements Serializable {
         return batches.contains(b);
     }
 
-    public Batch get(int i) {
-        return batches.get(i);
+    // assumes that all batches except last are Batch.MAX_SIZE
+    public Tuple get(int i) {
+        int c = batches.get(0).capacity();
+        int bindex = i / c;
+        int index = i % c;
+        return batches.get(bindex).get(index);
     }
 
     public int indexOf(Batch b) {
@@ -71,7 +75,11 @@ public class Block implements Serializable {
     }
 
     public int size() {
-        return batches.size();
+        int s = 0;
+        for(Batch b : batches) {
+            s += b.size();
+        }
+        return s;
     }
 
     public boolean isFull() {
