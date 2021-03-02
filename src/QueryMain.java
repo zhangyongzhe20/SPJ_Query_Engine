@@ -29,6 +29,7 @@ public class QueryMain {
 
         SQLQuery sqlquery = getSQLQuery(args[0]);
         System.out.println("isDesc: " + sqlquery.isDesc());
+        System.out.println("isAsc: " + sqlquery.isAsc());
         configureBufferManager(sqlquery.getNumJoin(), args, in);
 
         Operator root = getQueryPlan(sqlquery);
