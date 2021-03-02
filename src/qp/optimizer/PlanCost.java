@@ -144,7 +144,10 @@ public class PlanCost {
                 joincost = leftpages * rightpages;
                 break;
             case JoinType.BLOCKNESTED:
-                joincost = 7; /* to force block nested loops join, replace with real calculation later */
+                double l = leftpages;
+                double b = numbuff - 2;
+                double lb = l / b;
+                joincost = leftpages + (int) Math.ceil(lb) * rightpages;
                 break;
             default:
                 System.out.println("join type is not supported");
