@@ -28,6 +28,7 @@ public class QueryMain {
         Batch.setPageSize(getPageSize(args, in));
 
         SQLQuery sqlquery = getSQLQuery(args[0]);
+        System.out.println("isDesc: " + sqlquery.isDesc());
         configureBufferManager(sqlquery.getNumJoin(), args, in);
 
         Operator root = getQueryPlan(sqlquery);
