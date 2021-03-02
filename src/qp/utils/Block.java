@@ -9,41 +9,19 @@ import java.util.ArrayList;
 
 public class Block implements Serializable {
 
-    int MAX_SIZE;             // Number of batches per block
-    static int BlockSize;      // Number of bytes per block
+    int NUM_BATCH;
+    int NUM_TUPLES = -1;
     ArrayList<Batch> batches;  // The batches in the block
 
-    /** Set number of bytes per block **/
-    public static void setBlockSize(int size) {
-        BlockSize = size;
-    }
-
-    /** Get number of bytes per block **/
-    public static int getBlockSize() {
-        return BlockSize;
-    }
-
-    /** Number of batches per block **/
+    /** Number of batches per block, Batch must not be null **/
     public Block(int numbatch) {
-        MAX_SIZE = numbatch;
-        batches = new ArrayList<>(MAX_SIZE);
+        batches = new ArrayList<>(numbatch);
+        NUM_BATCH = numbatch;
     }
 
     /** Insert the batch in block at next free location **/
     public void add(Batch b) {
         batches.add(b);
-    }
-
-    public int capacity() {
-        return MAX_SIZE;
-    }
-
-    public void clear() {
-        batches.clear();
-    }
-
-    public boolean contains(Batch b) {
-        return batches.contains(b);
     }
 
     // assumes that all batches except last are Batch.MAX_SIZE
@@ -54,36 +32,26 @@ public class Block implements Serializable {
         return batches.get(bindex).get(index);
     }
 
-    public int indexOf(Batch b) {
-        return batches.indexOf(b);
-    }
-
-    public void add(Batch b, int i) {
-        batches.add(i, b);
-    }
-
     public boolean isEmpty() {
         return batches.isEmpty();
     }
 
-    public void remove(int i) {
-        batches.remove(i);
-    }
-
-    public void set(Batch b, int i) {
-        batches.set(i, b);
-    }
-
+    // refers to num TUPLES within all batches NOT num pages
     public int size() {
-        int s = 0;
-        for(Batch b : batches) {
-            s += b.size();
+        if (NUM_TUPLES != -1) {
+            return NUM_TUPLES;
         }
-        return s;
+
+        NUM_TUPLES = 0;
+        for(Batch b : batches) {
+            NUM_TUPLES += b.size();
+        }
+        return NUM_TUPLES;
     }
 
-    public boolean isFull() {
-        if (size() == capacity())
+    // checks if block is filled with maximum pages
+    public boolean isBatchesFull() {
+        if (batches.size() == NUM_BATCH)
             return true;
         else
             return false;
