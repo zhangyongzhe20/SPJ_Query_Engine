@@ -375,7 +375,7 @@ public class RandomOptimizer {
         } else if (node.getOpType() == OpType.SORT) {
             // TODO?
             System.out.println("Please implement RandomOptimizer.java:373");
-            return node;
+            return findNodeAt(((Sort) node).getBase(), joinNum);
         } else {
             return null;
         }
@@ -402,6 +402,9 @@ public class RandomOptimizer {
             node.setSchema(base.getSchema().subSchema(attrlist));
         } else if (node.getOpType() == OpType.SORT) {
             // TODO?
+            Operator base = ((Sort) node).getBase();
+            modifySchema(base);
+            node.setSchema(base.getSchema());
         }
     }
 }
