@@ -47,27 +47,27 @@ public class Sort extends Operator {
      */
     public boolean open() {
         System.out.println("Called open");
-        return true;
-//        if (!base.open()) {
-//            return false;
-//        }
-//
-//        //Create and prepare tuple reader
-//        int tupleSize = base.getSchema().getTupleSize();
-//        batchSize = Batch.getPageSize() / tupleSize;
-//
-//        tupleReader = new TupleReader(fileName, batchSize);
-//
-//        //Get list of attributes(column index) to sort on
-//        Schema baseSchema = base.getSchema();
-//        attrIndex = new int[attributeArrayList.size()];
-//        for (int i = 0; i < attributeArrayList.size(); i++) {
-//            Attribute attr = attributeArrayList.get(i);
-//            int index = baseSchema.indexOf(attr);
-//            attrIndex[i] = index;
-//        }
-//
 //        return true;
+        if (!base.open()) {
+            return false;
+        }
+
+        //Create and prepare tuple reader
+        int tupleSize = base.getSchema().getTupleSize();
+        batchSize = Batch.getPageSize() / tupleSize;
+
+        tupleReader = new TupleReader(fileName, batchSize);
+
+        //Get list of attributes(column index) to sort on
+        Schema baseSchema = base.getSchema();
+        attrIndex = new int[attributeArrayList.size()];
+        for (int i = 0; i < attributeArrayList.size(); i++) {
+            Attribute attr = attributeArrayList.get(i);
+            int index = baseSchema.indexOf(attr);
+            attrIndex[i] = index;
+        }
+
+        return true;
     }
 
     /**
