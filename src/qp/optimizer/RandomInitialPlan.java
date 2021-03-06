@@ -67,6 +67,8 @@ public class RandomInitialPlan {
             createJoinOp();
         }
         createProjectOp();
+        createDistinctOp();
+
 
         return root;
     }
@@ -188,6 +190,18 @@ public class RandomInitialPlan {
             Schema newSchema = base.getSchema().subSchema(projectlist);
             root.setSchema(newSchema);
         }
+    }
+
+    /**
+     * Creates a distinct operator.
+     */
+    private void createDistinctOp() {
+        if (!sqlquery.isDistinct()) {
+            return;
+        }
+        Distinct operator = new Distinct(root, sqlquery.getProjectList());
+        operator.setSchema(root.getSchema());
+        root = operator;
     }
 
     private void modifyHashtable(Operator old, Operator newop) {

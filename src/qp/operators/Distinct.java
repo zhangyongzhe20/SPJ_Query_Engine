@@ -1,5 +1,6 @@
 package qp.operators;
 
+import java.util.ArrayList;
 import java.util.Vector;
 
 import qp.utils.Attribute;
@@ -12,7 +13,7 @@ import qp.utils.Tuple;
  */
 public class Distinct extends Operator {
     // The project list (based on which we distinguish the duplicates).
-    private final Vector projectList;
+    private final ArrayList<Attribute> projectList;
     // The indices of all attributes in the projectList.
     private Vector<Integer> projectIndices = new Vector<>();
     // The base operator.
@@ -37,7 +38,7 @@ public class Distinct extends Operator {
      *
      * @param base is the base operator.
      */
-    public Distinct(Operator base, Vector projectList) {
+    public Distinct(Operator base, ArrayList<Attribute> projectList) {
         super(OpType.DISTINCT);
         this.base = base;
         this.projectList = projectList;
@@ -47,7 +48,7 @@ public class Distinct extends Operator {
     public boolean open() {
         batchSize = Batch.getPageSize() / schema.getTupleSize();
         for (int i = 0; i < projectList.size(); i++) {
-            Attribute attribute = (Attribute) projectList.elementAt(i);
+            Attribute attribute = (Attribute) projectList.get(i);
             projectIndices.add(schema.indexOf(attribute));
         }
 
@@ -139,9 +140,9 @@ public class Distinct extends Operator {
     @Override
     public Object clone() {
         Operator newBase = (Operator) base.clone();
-        Vector<Attribute> newProjectList = new Vector<>();
+        ArrayList<Attribute> newProjectList = new ArrayList<>();
         for (int i = 0; i < projectList.size(); i++) {
-            Attribute attribute = (Attribute) ((Attribute) projectList.elementAt(i)).clone();
+            Attribute attribute = (Attribute) ((Attribute) projectList.get(i)).clone();
             newProjectList.add(attribute);
         }
 

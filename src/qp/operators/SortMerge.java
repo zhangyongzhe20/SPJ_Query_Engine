@@ -7,7 +7,7 @@ import java.util.*;
 public class SortMerge extends Operator {
     protected Operator base;
     protected int numBuff;
-    protected Vector attrSet;
+    protected ArrayList attrSet;
     protected int[] attrIndex;
 
     protected int batchSize;
@@ -18,7 +18,7 @@ public class SortMerge extends Operator {
 
     protected ObjectInputStream in;
 
-    public SortMerge(Operator base, Vector as, int opType) {
+    public SortMerge(Operator base, ArrayList as, int opType) {
         super(opType);
         this.base = base;
         this.attrSet = as;
@@ -26,7 +26,7 @@ public class SortMerge extends Operator {
 //        this.fileName = fileName;
     }
 
-    public SortMerge(Operator base, Vector as, int numBuff, String fileName) {
+    public SortMerge(Operator base, ArrayList<Object> as, int numBuff, String fileName) {
         super(OpType.SORT);
         this.base = base;
         this.attrSet = as;
@@ -49,7 +49,7 @@ public class SortMerge extends Operator {
             Schema baseSchema = base.getSchema();
             attrIndex = new int[attrSet.size()];
             for (int i = 0; i < attrSet.size(); i++) {
-                Attribute attr = (Attribute) attrSet.elementAt(i);
+                Attribute attr = (Attribute) attrSet.get(i);
                 int index = baseSchema.indexOf(attr);
                 attrIndex[i] = index;
             }
