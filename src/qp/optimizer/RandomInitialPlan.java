@@ -23,6 +23,7 @@ public class RandomInitialPlan {
     ArrayList<Condition> joinlist;        // List of join conditions
     ArrayList<Attribute> groupbylist;
     ArrayList<Attribute> orderbylist;
+    String fileName;
     int numJoin;            // Number of joins in this query
     HashMap<String, Operator> tab_op_hash;  // Table name to the Operator
     Operator root;          // Root of the query plan tree
@@ -80,7 +81,7 @@ public class RandomInitialPlan {
 
     public void createSortOp() {
         // TODO
-        Sort s = new Sort(root, orderbylist);
+        Sort s = new Sort(root, orderbylist, fileName);
     }
 
     /**
