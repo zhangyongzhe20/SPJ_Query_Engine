@@ -11,8 +11,18 @@ import qp.utils.Batch;
  */
 public class Sort extends Operator {
 
+    Operator base;                 // Base table to sort
+
     public Sort(int type) {
         super(type);
+    }
+
+    public Operator getBase() {
+        return base;
+    }
+
+    public void setBase(Operator base) {
+        this.base = base;
     }
 
     /**

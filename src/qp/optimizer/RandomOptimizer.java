@@ -73,7 +73,8 @@ public class RandomOptimizer {
             ((Project) node).setBase(base);
             return node;
         } else if (node.getOpType() == OpType.SORT) {
-            // TODO?
+            Operator base = makeExecPlan(((Sort) node).getBase());
+            ((Sort) node).setBase(base);
             return node;
         } else {
             return node;
