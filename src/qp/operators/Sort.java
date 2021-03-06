@@ -39,6 +39,7 @@ public class Sort extends Operator {
      * Open file prepare a stream pointer to read input file
      */
     public boolean open() {
+        
         return false;
     }
 
