@@ -4,7 +4,10 @@
 
 package qp.operators;
 
+import qp.utils.Attribute;
 import qp.utils.Batch;
+
+import java.util.ArrayList;
 
 /**
  * Sort operator - sorts data from a file
@@ -12,9 +15,16 @@ import qp.utils.Batch;
 public class Sort extends Operator {
 
     Operator base;                 // Base table to sort
+    private ArrayList<Attribute> attributeArrayList;
+    protected int numBuff;
 
-    public Sort(int type) {
-        super(type);
+
+    public Sort(Operator source, ArrayList<Attribute> attrList) {
+        super(OpType.SORT);
+
+        this.base = source;
+        this.attributeArrayList = attrList;
+        //this.numBuff = numBuff;
     }
 
     public Operator getBase() {

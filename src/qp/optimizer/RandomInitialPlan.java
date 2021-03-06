@@ -22,6 +22,7 @@ public class RandomInitialPlan {
     ArrayList<Condition> selectionlist;   // List of select conditons
     ArrayList<Condition> joinlist;        // List of join conditions
     ArrayList<Attribute> groupbylist;
+    ArrayList<Attribute> orderbylist;
     int numJoin;            // Number of joins in this query
     HashMap<String, Operator> tab_op_hash;  // Table name to the Operator
     Operator root;          // Root of the query plan tree
@@ -34,6 +35,7 @@ public class RandomInitialPlan {
         joinlist = sqlquery.getJoinList();
         groupbylist = sqlquery.getGroupByList();
         numJoin = joinlist.size();
+
     }
 
     /**
@@ -77,7 +79,7 @@ public class RandomInitialPlan {
 
     public void createSortOp() {
         // TODO
-        Sort s = new Sort(OpType.SORT);
+        Sort s = new Sort(root, orderbylist);
     }
 
     /**
@@ -198,6 +200,7 @@ public class RandomInitialPlan {
             root.setSchema(newSchema);
         }
     }
+
 
     private void modifyHashtable(Operator old, Operator newop) {
         for (HashMap.Entry<String, Operator> entry : tab_op_hash.entrySet()) {

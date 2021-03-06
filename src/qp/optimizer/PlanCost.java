@@ -79,6 +79,7 @@ public class PlanCost {
         } else if (node.getOpType() == OpType.SORT) {
             return getStatistics((Sort) node);
         }
+        //TODO: Add getStatistics for Distinct and Sort
         System.out.println("operator is not supported");
         isFeasible = false;
         return 0;
