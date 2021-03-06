@@ -62,12 +62,6 @@ public class RandomInitialPlan {
             System.exit(1);
         }
 
-        if (sqlquery.getOrderByList().size() > 0) {
-            createSortOp();
-            System.err.println("Orderby is not implemented.");
-            System.exit(1);
-        }
-
         tab_op_hash = new HashMap<>();
         createScanOp();
         createSelectOp();
@@ -76,12 +70,17 @@ public class RandomInitialPlan {
         }
         createProjectOp();
 
+        System.out.println(tab_op_hash);
+        createSortOp();
+        System.out.println(tab_op_hash);
+
         return root;
     }
 
     public void createSortOp() {
         // TODO
         Sort s = new Sort(root, orderbylist, fileName);
+        root = s;
     }
 
     /**

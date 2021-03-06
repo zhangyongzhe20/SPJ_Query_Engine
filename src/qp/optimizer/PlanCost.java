@@ -88,7 +88,7 @@ public class PlanCost {
     protected long getStatistics(Sort node) {
         // TODO: use stats file for given table to calculate cost
         System.out.println("Please implement plan cost for sort in PlanCost.java:89");
-        return 0;
+        return calculateCost(node.getBase());
     }
 
     /**
