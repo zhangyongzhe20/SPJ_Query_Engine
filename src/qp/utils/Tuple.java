@@ -1,47 +1,54 @@
-/**
- * Tuple container class
- **/
-
 package qp.utils;
 
-import java.util.*;
-import java.io.*;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Vector;
 
 /**
- * Tuple - a simple object which holds an ArrayList of data
+ * Represents a tuple (i.e., a row).
  */
 public class Tuple implements Serializable {
+    // The data of this tuple.
+    private ArrayList<Object> _data;
 
-    public ArrayList<Object> _data;
-
+    /**
+     * Creates a new tuple.
+     *
+     * @param d is the data in this tuple.
+     */
     public Tuple(ArrayList<Object> d) {
         _data = d;
     }
 
     /**
-     * Accessor for data
+     * Getter for data.
+     *
+     * @return the data.
      */
-    public ArrayList<Object> data() {
+    public ArrayList<Object> getData() {
         return _data;
     }
 
+    /**
+     * Getters the data at a given index.
+     *
+     * @param index is the index.
+     * @return the data at the given index.
+     */
     public Object dataAt(int index) {
         return _data.get(index);
     }
 
     /**
-     * Checks whether the join condition is satisfied or not with one condition
-     * * before performing actual join operation
-     **/
-    public boolean checkJoin(Tuple right, int leftindex, int rightindex) {
-        Object leftData = dataAt(leftindex);
-        Object rightData = right.dataAt(rightindex);
-        if (leftData.equals(rightData))
-            return true;
-        else
-            return false;
-    }
-
+     * Checks whether the join condition is satisfied. This should be called before performing
+     * actual join operation. Notice: JOIN means EQUAL operator.
+     *
+     * @param right is the other tuple to be joined with.
+     * @param leftIndex is the index of the join attribute in the left table.
+     * @param rightIndex is the index of the join attribute in the right table.
+     * @return true if the join condition is satisfied
+     */
     /**
      * Checks whether the join condition is satisfied or not with multiple conditions
      * * before performing actual join operation
@@ -60,65 +67,54 @@ public class Tuple implements Serializable {
     }
 
     /**
-     * Joining two tuples without duplicate column elimination
-     **/
+     * Joins two tuples Without duplicate column elimination.
+     *
+     * @param right is the other tuple to be joined with.
+     * @return the joined tuple
+     */
     public Tuple joinWith(Tuple right) {
-        ArrayList<Object> newData = new ArrayList<>(this.data());
-        newData.addAll(right.data());
+        ArrayList<Object> newData = new ArrayList<Object>(this.getData());
+        newData.addAll(right.getData());
         return new Tuple(newData);
     }
 
     /**
-     * Compare two tuples in the same table on given attribute
-     **/
+     * Compare two tuples in the same table on the same given attribute.
+     *
+     * @param left is the left tuple.
+     * @param right is the right tuple
+     * @param index is the index of the attribute to be compared.
+     * @return the comparision result.
+     */
     public static int compareTuples(Tuple left, Tuple right, int index) {
         return compareTuples(left, right, index, index);
     }
 
     /**
-     * Comparing tuples in different tables, used for join condition checking
-     **/
-    public static int compareTuples(Tuple left, Tuple right, int leftIndex, int rightIndex) {
-        Object leftdata = left.dataAt(leftIndex);
-        Object rightdata = right.dataAt(rightIndex);
-        if (leftdata instanceof Integer) {
-            return ((Integer) leftdata).compareTo((Integer) rightdata);
-        } else if (leftdata instanceof String) {
-            return ((String) leftdata).compareTo((String) rightdata);
-        } else if (leftdata instanceof Float) {
-            return ((Float) leftdata).compareTo((Float) rightdata);
+     * Compare two tuples in different tables on two given attributes.
+     *
+     * @param left is the left tuple.
+     * @param right is the right tuple.
+     * @param leftIndex is the index of the attribute from the left tuple.
+     * @param rightIndex is the index of the attribute from the right tuple.
+     * @return the comparision result.
+     */
+    private static int compareTuples(Tuple left, Tuple right, int leftIndex, int rightIndex) {
+        Object leftValue = left.dataAt(leftIndex);
+        Object rightValue = right.dataAt(rightIndex);
+
+        if (leftValue instanceof Integer) {
+            return ((Integer) leftValue).compareTo((Integer) rightValue);
+        } else if (leftValue instanceof String) {
+            return ((String) leftValue).compareTo((String) rightValue);
+        } else if (leftValue instanceof Float) {
+            return ((Float) leftValue).compareTo((Float) rightValue);
+        } else if (leftValue instanceof Date) {
+            return ((Date) leftValue).compareTo((Date) rightValue);
         } else {
             System.out.println("Tuple: Unknown comparision of the tuples");
             System.exit(1);
             return 0;
         }
-    }
-
-    /**
-     * Comparing tuples in different tables with multiple conditions, used for join condition checking
-     **/
-    public static int compareTuples(Tuple left, Tuple right, ArrayList<Integer> leftIndex, ArrayList<Integer> rightIndex) {
-        if (leftIndex.size() != rightIndex.size()) {
-            System.out.println("Tuple: Unknown comparision of the tuples");
-            System.exit(1);
-            return 0;
-        }
-        for (int i = 0; i < leftIndex.size(); ++i) {
-            Object leftdata = left.dataAt(leftIndex.get(i));
-            Object rightdata = right.dataAt(rightIndex.get(i));
-            if (leftdata.equals(rightdata)) continue;
-            if (leftdata instanceof Integer) {
-                return ((Integer) leftdata).compareTo((Integer) rightdata);
-            } else if (leftdata instanceof String) {
-                return ((String) leftdata).compareTo((String) rightdata);
-            } else if (leftdata instanceof Float) {
-                return ((Float) leftdata).compareTo((Float) rightdata);
-            } else {
-                System.out.println("Tuple: Unknown comparision of the tuples");
-                System.exit(1);
-                return 0;
-            }
-        }
-        return 0;
     }
 }

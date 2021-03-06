@@ -1,81 +1,153 @@
 package qp.operators;
 
-/** To projec out the required attributes from the result **/
-
-import qp.utils.Batch;
-import qp.utils.Tuple;
-
 import java.util.Vector;
 
-public class Distinct extends SortMerge{
+import qp.utils.Attribute;
+import qp.utils.Batch;
+import qp.utils.Schema;
+import qp.utils.Tuple;
 
-    Batch inbatch;
-    Batch outbatch;
-    boolean eos;    // Indicate whether end of stream is reached or not
-    Tuple lastTuple;
-    int start;       // Cursor position in the input buffer
+/**
+ * Defines a distinct operator which eliminates duplicates from input.
+ */
+public class Distinct extends Operator {
+    // The project list (based on which we distinguish the duplicates).
+    private final Vector projectList;
+    // The indices of all attributes in the projectList.
+    private Vector<Integer> projectIndices = new Vector<>();
+    // The base operator.
+    private Operator base;
+    // The sort operator applied on the base operator.
+    private SortMerge sortedBase;
+    // The number of tuples per batch.
+    private int batchSize;
+    // The number of buffers available
+    private int numOfBuffer;
+    // Records whether we have reached end-of-stream.
+    private boolean eos = false;
+    // The input batch.
+    private Batch inBatch = null;
+    // The index for the current element being read from input batch.
+    private int inIndex = 0;
+    // The last tuple being outputted.
+    private Tuple lastOutTuple = null;
 
-    public Distinct(Operator base, Vector as, int type,int numbuff) {
-        super(base, as, type);
+    /**
+     * Creates a new distinct operator.
+     *
+     * @param base is the base operator.
+     */
+    public Distinct(Operator base, Vector projectList) {
+        super(OpType.DISTINCT);
+        this.base = base;
+        this.projectList = projectList;
     }
 
     @Override
     public boolean open() {
-        eos = false;
-        start = 0;
-        lastTuple = null;
-        return super.open();
+        batchSize = Batch.getPageSize() / schema.getTupleSize();
+        for (int i = 0; i < projectList.size(); i++) {
+            Attribute attribute = (Attribute) projectList.elementAt(i);
+            projectIndices.add(schema.indexOf(attribute));
+        }
+
+        sortedBase = new SortMerge(base, projectList, numOfBuffer);
+        return sortedBase.open();
     }
+
     @Override
     public Batch next() {
-        int i;
         if (eos) {
-            super.close();
+            close();
             return null;
+        } else if (inBatch == null) {
+            inBatch = sortedBase.next();
         }
 
-        /** An output buffer is initiated**/
-        outbatch = new Batch(batchSize);
-
-        /** keep on checking the incoming pages until
-         ** the output buffer is full
-         **/
-        while (!outbatch.isFull()) {
-            if (start == 0) {
-                inbatch= super.next();
-                /** There is no more incoming pages from base operator **/
-                if (inbatch == null) {
-
-                    eos = true;
-                    return outbatch;
-                }
+        Batch outBatch = new Batch(batchSize);
+        while (!outBatch.isFull()) {
+            if (inBatch == null || inBatch.size() <= inIndex) {
+                eos = true;
+                break;
             }
 
-            /** Continue this for loop until this page is fully observed
-             ** or the output buffer is full
-             **/
-            for (i = start; i < inbatch.size() && (!outbatch.isFull()); i++) {
-                Tuple present = inbatch.elementAt(i);
-//                System.out.println("tuple: " + present.dataAt(0) + " " + present.dataAt(1)
-//                        + " " + present.dataAt(2) + " " + present.dataAt(3));
-                /** If the condition is satisfied then
-                 ** this tuple is added to the output buffer
-                 **/
-                if (lastTuple == null || Tuple.compareTuples(lastTuple, present, attrIndex) != 0) {
-                    outbatch.add(present);
-                    lastTuple = present;
-                }
+            Tuple current = inBatch.elementAt(inIndex);
+            if (lastOutTuple == null || checkTuplesNotEqual(lastOutTuple, current)) {
+                outBatch.add(current);
+                lastOutTuple = current;
             }
+            inIndex++;
 
-            /** Modify the cursor to the position requierd
-             ** when the base operator is called next time;
-             **/
-
-            if (i == inbatch.size())
-                start = 0;
-            else
-                start = i;
+            if (inIndex == batchSize) {
+                inBatch = sortedBase.next();
+                inIndex = 0;
+            }
         }
-        return outbatch;
+
+        return outBatch;
+    }
+
+    /**
+     * Checks whether two tuples are not equal.
+     *
+     * @param tuple1 is the first tuple.
+     * @param tuple2 is the second tuple.
+     * @return true if they are not equal.
+     */
+    private boolean checkTuplesNotEqual(Tuple tuple1, Tuple tuple2) {
+        for (int index: projectIndices) {
+            int result = Tuple.compareTuples(tuple1, tuple2, index);
+            if (result != 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public boolean close() {
+        return sortedBase.close();
+    }
+
+    /**
+     * Setter for numOfBuffer.
+     *
+     * @param numOfBuffer is the number of buffer pages available.
+     */
+    public void setNumOfBuffer(int numOfBuffer) {
+        this.numOfBuffer = numOfBuffer;
+    }
+
+    /**
+     * Getter for base.
+     *
+     * @return the base operator.
+     */
+    public Operator getBase() {
+        return base;
+    }
+
+    /**
+     * Setter for base.
+     *
+     * @param base is the base operator.
+     */
+    public void setBase(Operator base) {
+        this.base = base;
+    }
+
+    @Override
+    public Object clone() {
+        Operator newBase = (Operator) base.clone();
+        Vector<Attribute> newProjectList = new Vector<>();
+        for (int i = 0; i < projectList.size(); i++) {
+            Attribute attribute = (Attribute) ((Attribute) projectList.elementAt(i)).clone();
+            newProjectList.add(attribute);
+        }
+
+        Distinct newDistinct = new Distinct(newBase, newProjectList);
+        Schema newSchema = newBase.getSchema();
+        newDistinct.setSchema(newSchema);
+        return newDistinct;
     }
 }
