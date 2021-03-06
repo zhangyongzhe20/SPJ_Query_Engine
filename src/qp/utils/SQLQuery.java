@@ -23,6 +23,7 @@ public class SQLQuery {
 
     boolean isDistinct = false;          // Whether distinct key word appeared in select clause
     boolean isDesc = false;
+    boolean isAsc = false;
 
     public SQLQuery(ArrayList<Attribute> list1, ArrayList<String> list2, ArrayList<Condition> list3) {
         projectList = list1;
@@ -83,6 +84,14 @@ public class SQLQuery {
 
     public boolean isDesc() {
         return isDesc;
+    }
+
+    public void setIsAsc(boolean flag) {
+        isAsc = flag;
+    }
+
+    public boolean isAsc() {
+        return isAsc;
     }
 
     public ArrayList<Attribute> getProjectList() {
