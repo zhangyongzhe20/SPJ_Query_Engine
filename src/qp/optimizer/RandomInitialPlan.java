@@ -79,7 +79,7 @@ public class RandomInitialPlan {
 
     public void createSortOp() {
         // TODO
-        Sort s = new Sort(root, orderbylist, "CUSTOMER.tbl");
+        Sort s = new Sort(root, orderbylist, "CUSTOMER");
         root = s;
     }
 

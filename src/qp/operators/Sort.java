@@ -60,8 +60,8 @@ public class Sort extends Operator {
         int tupleSize = base.getSchema().getTupleSize();
         batchSize = Batch.getPageSize() / tupleSize;
 
-        tupleReader = new TupleReader(fileName, batchSize);
-        tupleReader.open();
+        /*tupleReader = new TupleReader(fileName, batchSize);
+        tupleReader.open();*/
 
         //Get list of attributes(column index) to sort on
         Schema baseSchema = base.getSchema();
