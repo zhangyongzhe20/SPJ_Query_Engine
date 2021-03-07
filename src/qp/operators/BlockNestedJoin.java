@@ -117,7 +117,7 @@ public class BlockNestedJoin extends Join {
                     return outbatch;
                 }
 
-                leftbatch = new Block(numBuff - 2);
+                leftbatch = new Block(numBuff - 2, batchsize);
                 leftbatch.add(b); // there is guaranteed atleast some tuples in block
                 while(!leftbatch.isBatchesFull()) {
                     b = left.next();

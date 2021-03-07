@@ -11,7 +11,7 @@ import java.io.*;
 
 public class TupleReader {
 
-    final String filename;    // Filename to write to
+    final String filename;    // Filename to read from
     final int batchsize;        // Number of tuples per out batch
 
     Batch inBatch;                            // Currently buffered input
@@ -22,7 +22,7 @@ public class TupleReader {
     Tuple peekTuple = null;            // The next tuple of the batch (if peeked)
     ObjectInputStream in;                // Input file stream
 
-    // filename: Filename of the output file to read from
+    // filename: Filename of the input file to read from
     // batchsize: Number of tuples per batch
     public TupleReader(String filename, int batchsize) {
         this.filename = filename;
@@ -57,6 +57,7 @@ public class TupleReader {
             in = new ObjectInputStream(new FileInputStream(filename));
         } catch (IOException io) {
             System.out.printf("%s:reading the temporary file error", filename);
+            io.printStackTrace();
             return false;
         }
         inBatch = null;

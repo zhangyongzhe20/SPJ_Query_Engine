@@ -11,12 +11,16 @@ public class Block implements Serializable {
 
     int NUM_BATCH;
     int NUM_TUPLES = -1;
+    int pageSize = -1;
     ArrayList<Batch> batches;  // The batches in the block
+    ArrayList<Tuple> tuples;
 
     /** Number of batches per block, Batch must not be null **/
-    public Block(int numbatch) {
+    public Block(int numbatch, int pageSize) {
         batches = new ArrayList<>(numbatch);
         NUM_BATCH = numbatch;
+        this.pageSize = pageSize;
+        tuples = new ArrayList<>(numbatch * pageSize);
     }
 
     /** Insert the batch in block at next free location **/
@@ -55,5 +59,20 @@ public class Block implements Serializable {
             return true;
         else
             return false;
+    }
+
+    public void setTuples(ArrayList<Tuple> tupleList) {
+        Batch batch = new Batch(pageSize);
+        for(int i = 0;i < tupleList.size();i++) {
+            if(batch.isFull()) {
+                batches.add(batch);
+                batch = new Batch(pageSize);
+            }
+            batch.add((Tuple) tupleList.get(i));
+            tuples.add((Tuple) tupleList.get(i));
+        }
+        if(!batch.isEmpty()) {
+            batches.add(batch);
+        }
     }
 }

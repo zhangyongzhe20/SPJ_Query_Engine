@@ -94,6 +94,17 @@ public class Tuple implements Serializable {
         }
     }
 
+    public static int compareTuples(Tuple left,Tuple right, int[] indexes){
+        int diff;
+        for (int index : indexes){
+            diff = compareTuples(left, right, index);
+            if(diff != 0){
+                return diff;
+            }
+        }
+        return 0;
+    }
+
     /**
      * Comparing tuples in different tables with multiple conditions, used for join condition checking
      **/
