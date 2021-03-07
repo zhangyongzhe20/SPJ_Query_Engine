@@ -59,6 +59,7 @@ public class RandomInitialPlan {
         }
 
         if (sqlquery.getOrderByList().size() > 0) {
+            createSortOp();
             System.err.println("Orderby is not implemented.");
             System.exit(1);
         }
@@ -72,6 +73,11 @@ public class RandomInitialPlan {
         createProjectOp();
 
         return root;
+    }
+
+    public void createSortOp() {
+        // TODO
+        Sort s = new Sort(OpType.SORT);
     }
 
     /**

@@ -76,9 +76,17 @@ public class PlanCost {
             return getStatistics((Project) node);
         } else if (node.getOpType() == OpType.SCAN) {
             return getStatistics((Scan) node);
+        } else if (node.getOpType() == OpType.SORT) {
+            return getStatistics((Sort) node);
         }
         System.out.println("operator is not supported");
         isFeasible = false;
+        return 0;
+    }
+
+    protected long getStatistics(Sort node) {
+        // TODO: use stats file for given table to calculate cost
+        System.out.println("Please implement plan cost for sort in PlanCost.java:89");
         return 0;
     }
 
@@ -144,7 +152,10 @@ public class PlanCost {
                 joincost = leftpages * rightpages;
                 break;
             case JoinType.BLOCKNESTED:
-                joincost = 7; /* to force block nested loops join, replace with real calculation later */
+                double l = leftpages;
+                double b = numbuff - 2;
+                double lb = l / b;
+                joincost = leftpages + (int) Math.ceil(lb) * rightpages;
                 break;
             case JoinType.SORTMERGE:
                 // cost of sorting left and right page

@@ -6,6 +6,7 @@ package qp.operators;
 
 import qp.utils.Attribute;
 import qp.utils.Batch;
+import qp.utils.Block;
 import qp.utils.Condition;
 import qp.utils.Tuple;
 
@@ -20,7 +21,7 @@ public class BlockNestedJoin extends Join {
     ArrayList<Integer> rightindex;  // Indices of the join attributes in right table
     String rfname;                  // The file name where the right table is materialized
     Batch outbatch;                 // Buffer page for output
-    Batch leftbatch;                // Buffer page for left input stream
+    Block leftbatch;                // Buffer page for left input stream
     Batch rightbatch;               // Buffer page for right input stream
     ObjectInputStream in;           // File pointer to the right hand materialized file
 
@@ -110,11 +111,22 @@ public class BlockNestedJoin extends Join {
         while (!outbatch.isFull()) {
             if (lcurs == 0 && eosr == true) {
                 /** new left page is to be fetched**/
-                leftbatch = (Batch) left.next();
-                if (leftbatch == null) {
+                Batch b = left.next();
+                if (b == null) {
                     eosl = true;
                     return outbatch;
                 }
+
+                leftbatch = new Block(numBuff - 2);
+                leftbatch.add(b); // there is guaranteed atleast some tuples in block
+                while(!leftbatch.isBatchesFull()) {
+                    b = left.next();
+                    if (b == null) {
+                        break; // dont set eosl flag until round where EOF
+                    }
+                    leftbatch.add(b);
+                }
+
                 /** Whenever a new left page came, we have to start the
                  ** scanning of right table
                  **/
