@@ -29,13 +29,12 @@ public class Sort extends Operator {
     protected ObjectInputStream in;
 
 
-    public Sort(Operator source, ArrayList<Attribute> attrList, String fileName) {
+    public Sort(Operator source, ArrayList<Attribute> attrList) {
         super(OpType.SORT);
 
         this.base = source;
         this.attributeArrayList = attrList;
         //this.numBuff = numBuff;
-        this.fileName = fileName;
     }
 
     public Operator getBase() {
@@ -71,7 +70,7 @@ public class Sort extends Operator {
             int index = baseSchema.indexOf(attr);
             attrIndex[i] = index;
         }
-
+        System.out.println("bvvvvbb");
         generateSortedRuns();
 
 
@@ -79,7 +78,9 @@ public class Sort extends Operator {
             if(sortedFiles.size() != 1) {
                 return false;
             }
+
             in = new ObjectInputStream(new FileInputStream(sortedFiles.get(0)));
+
         } catch (IOException e) {
             System.out.println(" Error reading the file");
             return false;
@@ -93,10 +94,12 @@ public class Sort extends Operator {
      * Next operator - get a tuple from the file
      **/
     public Batch next() {
+        System.out.println("sssss");
         if(sortedFiles.size() != 1) {
             System.out.println("There is something wrong with sort-merge process. ");
         }
         try {
+            System.out.println("aaaaaa");
             Batch batch = (Batch) in.readObject();
 
             return batch;
@@ -110,8 +113,10 @@ public class Sort extends Operator {
     }
 
     public void generateSortedRuns() {
+        System.out.println("ssssaaaaas");
         int numRuns = 0;
         Batch batch = base.next();
+
         int numTuples = 0;
         while(batch != null) {
             Block run = new Block(numBuff, batchSize);
@@ -151,6 +156,7 @@ public class Sort extends Operator {
 
     public File writeOutFile(Block run, int numRuns) {
         try {
+            System.out.println("cccccc");
             File temp = new File(fileName + "-SMTemp-" + numRuns);
             ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(temp));
             for(Batch batch : run.getBatches()) {
