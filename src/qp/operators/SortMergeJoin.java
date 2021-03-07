@@ -43,6 +43,8 @@ public class SortMergeJoin extends Join{
         super(basejn.getLeft(), basejn.getRight(), basejn.getCondition(), basejn.getOpType());
         //TODO others
         schema = basejn.getSchema();
+        jointype = basejn.getJoinType();
+        numBuff = basejn.getNumBuff();
     }
 
     /**
