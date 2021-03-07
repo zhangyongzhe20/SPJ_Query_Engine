@@ -6,8 +6,9 @@ package qp.operators;
 
 import qp.utils.*;
 
-import java.io.File;
+import java.io.*;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
@@ -25,6 +26,7 @@ public class Sort extends Operator {
     protected TupleWriter tupleWriter;
     protected int[] attrIndex;
     protected List<File> sortedFiles;
+    protected ObjectInputStream in;
 
 
     public Sort(Operator source, ArrayList<Attribute> attrList, String fileName) {
@@ -72,6 +74,17 @@ public class Sort extends Operator {
 
         generateSortedRuns();
 
+
+        try {
+            if(sortedFiles.size() != 1) {
+                return false;
+            }
+            in = new ObjectInputStream(new FileInputStream(sortedFiles.get(0)));
+        } catch (IOException e) {
+            System.out.println(" Error reading the file");
+            return false;
+        }
+
         return true;
 
     }
@@ -80,10 +93,84 @@ public class Sort extends Operator {
      * Next operator - get a tuple from the file
      **/
     public Batch next() {
+        if(sortedFiles.size() != 1) {
+            System.out.println("There is something wrong with sort-merge process. ");
+        }
+        try {
+            Batch batch = (Batch) in.readObject();
+
+            return batch;
+        } catch (IOException e) {
+
+            return null;
+        } catch (ClassNotFoundException e) {
+            System.out.println("File not found. ");
+        }
         return null;
     }
 
     public void generateSortedRuns() {
+        int numRuns = 0;
+        Batch batch = base.next();
+        int numTuples = 0;
+        while(batch != null) {
+            Block run = new Block(numBuff, batchSize);
+
+            while(!run.isBatchesFull() && batch != null) {
+
+                run.add(batch);
+                batch = base.next();
+            }
+
+            numRuns++;
+            List<Tuple> tuples = run.getTuples();
+            numTuples += tuples.size();
+            Collections.sort(tuples, new AttrComparator(attrIndex));
+
+            Block sortedRun = new Block(numBuff, batchSize);
+            sortedRun.setTuples(tuples);
+
+            File result = writeOutFile(sortedRun, numRuns);
+            sortedFiles.add(result);
+        }
+    }
+
+    //Comparator for the Collections sort function in generatedSortedRuns
+    class AttrComparator implements Comparator<Tuple> {
+        private int[] attrIndex;
+
+        public AttrComparator(int[] attrIndex) {
+            this.attrIndex = attrIndex;
+        }
+
+        @Override
+        public int compare(Tuple t1, Tuple t2) {
+            return Tuple.compareTuples(t1, t2, attrIndex);
+        }
+    }
+
+    public File writeOutFile(Block run, int numRuns) {
+        try {
+            File temp = new File(fileName + "-SMTemp-" + numRuns);
+            ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(temp));
+            for(Batch batch : run.getBatches()) {
+                out.writeObject(batch);
+            }
+            out.close();
+            return temp;
+        } catch (IOException io) {
+            System.out.println("SortMerge: writing the temporary file error");
+        }
+        return null;
+    }
+
+
+
+
+
+
+    //2nd (bugged) version of generateSortedRuns() uses TupleReader and TupleWriter
+    /*public void generateSortedRuns() {
         int numRuns = 0;
         Block run = new Block(numBuff, batchSize);
         tupleReader.open();
@@ -110,9 +197,9 @@ public class Sort extends Operator {
         System.out.println("Tuples read. Ready to sort");
         tuples.sort((o1, o2) -> Tuple.compareTuples(o1,o2,attrIndex));
 
-       /* //Create block to hold sorted tuples and write out to file
+       *//* //Create block to hold sorted tuples and write out to file
         Block sortedRun = new Block(numBuff, batchSize);
-        sortedRun.setTuples(tuples);*/
+        sortedRun.setTuples(tuples);*//*
 
         String writeFile = fileName + "-SMTemp-" + numRuns;
         tupleWriter = new TupleWriter(writeFile,batchSize);
@@ -120,7 +207,7 @@ public class Sort extends Operator {
         for (Tuple t:tuples) {
             tupleWriter.next(t);
         }
-    }
+    }*/
 
 
     /**

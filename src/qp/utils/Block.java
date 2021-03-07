@@ -6,6 +6,7 @@ package qp.utils;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.List;
 
 public class Block implements Serializable {
 
@@ -36,6 +37,10 @@ public class Block implements Serializable {
         return batches.get(bindex).get(index);
     }
 
+    public ArrayList<Batch> getBatches() {
+        return batches;
+    }
+
     public boolean isEmpty() {
         return batches.isEmpty();
     }
@@ -61,7 +66,7 @@ public class Block implements Serializable {
             return false;
     }
 
-    public void setTuples(ArrayList<Tuple> tupleList) {
+    public void setTuples(List<Tuple> tupleList) {
         Batch batch = new Batch(pageSize);
         for(int i = 0;i < tupleList.size();i++) {
             if(batch.isFull()) {
@@ -74,5 +79,9 @@ public class Block implements Serializable {
         if(!batch.isEmpty()) {
             batches.add(batch);
         }
+    }
+
+    public List<Tuple> getTuples() {
+        return tuples;
     }
 }
