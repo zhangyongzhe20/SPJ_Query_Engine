@@ -157,6 +157,15 @@ public class PlanCost {
                 double lb = l / b;
                 joincost = leftpages + (int) Math.ceil(lb) * rightpages;
                 break;
+            case JoinType.SORTMERGE:
+                // cost of sorting left and right page
+                double sortLeftCost = 2 * leftpages * (1 + Math.ceil(Math.log(Math.ceil((double)(leftpages / numbuff))) / Math.log(numbuff - 1)));
+                double sortRightCost = 2 * rightpages * (1 + Math.ceil(Math.log(Math.ceil((double)(rightpages / numbuff))) / Math.log(numbuff - 1)));
+                // cost of merge join
+                double mergeLeftRight = leftpages + rightpages;
+                // total cost
+                joincost = (long) (sortLeftCost + sortRightCost + mergeLeftRight);
+                break;
             default:
                 System.out.println("join type is not supported");
                 return 0;

@@ -175,7 +175,9 @@ public class RandomInitialPlan {
             /** randomly select a join type**/
             int numJMeth = JoinType.numJoinTypes();
             int joinMeth = RandNumb.randInt(0, numJMeth - 1);
+            //force to use sortmerge for testing
             jn.setJoinType(joinMeth);
+            //jn.setJoinType(2);
             modifyHashtable(left, jn);
             modifyHashtable(right, jn);
             bitCList.set(jnnum);
