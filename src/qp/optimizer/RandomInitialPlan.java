@@ -4,6 +4,7 @@
 
 package qp.optimizer;
 
+import org.w3c.dom.Attr;
 import qp.operators.*;
 import qp.utils.*;
 
@@ -22,6 +23,7 @@ public class RandomInitialPlan {
     ArrayList<Condition> selectionlist;   // List of select conditons
     ArrayList<Condition> joinlist;        // List of join conditions
     ArrayList<Attribute> groupbylist;
+    ArrayList<Attribute> orderbylist;
     int numJoin;            // Number of joins in this query
     HashMap<String, Operator> tab_op_hash;  // Table name to the Operator
     Operator root;          // Root of the query plan tree
@@ -34,6 +36,7 @@ public class RandomInitialPlan {
         joinlist = sqlquery.getJoinList();
         groupbylist = sqlquery.getGroupByList();
         numJoin = joinlist.size();
+        orderbylist = sqlquery.getOrderByList();
     }
 
     /**
@@ -58,17 +61,14 @@ public class RandomInitialPlan {
             System.exit(1);
         }
 
-        if (sqlquery.getOrderByList().size() > 0) {
-            createSortOp();
-            System.err.println("Orderby is not implemented.");
-            System.exit(1);
-        }
-
         tab_op_hash = new HashMap<>();
         createScanOp();
         createSelectOp();
         if (numJoin != 0) {
             createJoinOp();
+        }
+        if (sqlquery.getOrderByList().size() > 0) {
+            createSortOp();
         }
         createProjectOp();
 
@@ -76,8 +76,24 @@ public class RandomInitialPlan {
     }
 
     public void createSortOp() {
-        // TODO
-        Sort s = new Sort(OpType.SORT);
+        // TODO: currently only supports single attribute sort
+        // TODO: cannot yet control direction of sort
+        Sort op1 = null;
+        for (int j = 0; j < orderbylist.size(); ++j) {
+            Attribute a = orderbylist.get(j);
+            String tabname = a.getTabName();
+            Operator tempop = (Operator) tab_op_hash.get(tabname);
+            op1 = new Sort(tempop, OpType.SORT);
+            /** set the schema same as base relation **/
+            op1.setSchema(tempop.getSchema());
+            modifyHashtable(tempop, op1);
+        }
+
+        /** The last selection is the root of the plan tre
+         ** constructed thus far
+         **/
+        if (orderbylist.size() != 0)
+            root = op1;
     }
 
     /**

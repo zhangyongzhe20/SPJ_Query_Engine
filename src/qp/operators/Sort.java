@@ -5,6 +5,7 @@
 package qp.operators;
 
 import qp.utils.Batch;
+import qp.utils.Tuple;
 
 /**
  * Sort operator - sorts data from a file
@@ -13,8 +14,9 @@ public class Sort extends Operator {
 
     Operator base;                 // Base table to sort
 
-    public Sort(int type) {
+    public Sort(Operator base, int type) {
         super(type);
+        this.base = base;
     }
 
     public Operator getBase() {
@@ -29,13 +31,19 @@ public class Sort extends Operator {
      * Open file prepare a stream pointer to read input file
      */
     public boolean open() {
-        return false;
+        Batch b = base.next();
+        Debug.PPrint(b); // should be non-null
+        for(int i = 0; i < b.size(); i++) {
+            Debug.PPrint(b.get(i)); // should be non-null
+        }
+        return true;
     }
 
     /**
      * Next operator - get a tuple from the file
      **/
     public Batch next() {
+        System.out.println("Sort.next() called");
         return null;
     }
 
@@ -44,7 +52,7 @@ public class Sort extends Operator {
      * * is already reached
      **/
     public boolean close() {
-        return false;
+        return true;
     }
 
     public Object clone() {
