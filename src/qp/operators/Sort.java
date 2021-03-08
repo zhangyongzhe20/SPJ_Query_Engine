@@ -24,7 +24,9 @@ public class Sort extends Operator {
     int sortOn;
     int batchSize;
     int numBuff;
-    int numRuns;
+    ArrayList<String> filenames;
+    int currFile;
+    boolean eof;
     TupleReader tr;
 
     public Sort(Operator base, boolean isAsc, boolean isDesc, int sortOn, int type, int numBuff) {
@@ -32,7 +34,9 @@ public class Sort extends Operator {
         this.base = base;
         this.sortOn = sortOn;
         this.numBuff = numBuff;
-        this.numRuns = 0;
+        filenames = new ArrayList<>();
+        currFile = 0;
+        eof = false;
     }
 
     public Operator getBase() {
@@ -56,7 +60,6 @@ public class Sort extends Operator {
         //Create and prepare tuple reader
         int tupleSize = base.getSchema().getTupleSize();
         batchSize = Batch.getPageSize() / tupleSize;
-        Schema baseSchema = base.getSchema();
 
         generateSortedRuns();
 
@@ -69,24 +72,42 @@ public class Sort extends Operator {
      * Next operator - get a tuple from the file
      **/
     public Batch next() {
-        return null;
-//        if(tr == null) {
-//            tr = new TupleReader("SMTEMP-0.out", batchSize);
-//            tr.open();
-//        }
-//        Tuple t = tr.next();
-//        Batch b = new Batch(batchSize);
-//        while(t != null) {
-//            b.add(t);
-//            if(b.isFull()) {
-//                return b;
-//            }
-//            t = tr.next();
-//        }
-//        if(b.isEmpty()) {
-//            return null;
-//        }
-//        return b;
+
+        if(eof) {
+            return null;
+        }
+
+        if(tr == null) {
+            tr = new TupleReader("SMTEMP-0.out", batchSize);
+            if(!tr.open()) {
+                System.out.println("Error opening tr in Sort.next()");
+                System.exit(3);
+            }
+        }
+
+        Batch b = new Batch(batchSize);
+        while(!b.isFull()) {
+            Tuple t = tr.next();
+            if(t == null) {
+                tr.close();
+                if(currFile == filenames.size() - 1) {
+                    eof = true;
+                    if(b.isEmpty()) {
+                        return null;
+                    }
+                    return b;
+                }
+                tr = new TupleReader(filenames.get(currFile + 1), batchSize);
+                if(!tr.open()) {
+                    System.out.println("Error opening tr in Sort.next()");
+                    System.exit(3);
+                }
+                currFile++;
+                break;
+            }
+            b.add(t);
+        }
+        return b;
     }
 
 
@@ -96,39 +117,44 @@ public class Sort extends Operator {
         TupleWriter tw;
         ArrayList<Tuple> toSort = new ArrayList<>();
 
-        Batch batch = base.next();
-
         System.out.println("numbuff = " + numBuff);
+        int counter = 0;
+        boolean flag = false;
 
-        while(batch != null) {
+        while(true) {
+
+            String filename = "SMTEMP-"+filenames.size()+".out";
+            tw = new TupleWriter(filename, batchSize);
+            if (!tw.open()) {
+                System.out.println("TupleWriter: Error in opening of TupleWriter");
+                System.exit(3);
+            }
+
             toSort.clear();
+
             for(int i = 0; i < numBuff; i++) {
+                Batch batch = base.next();
                 if(batch == null) {
+                    flag = true;
                     break;
                 }
                 for(int j = 0; j < batch.size(); j++) {
                     toSort.add(batch.get(j));
                 }
-                batch = base.next();
-            }
-            if(toSort.isEmpty()) {
-                return;
             }
             toSort.sort(new AttrComparator(sortOn));
-            tw = new TupleWriter("SMTEMP-"+numRuns+".out", batchSize);
-            if (!tw.open()) {
-                System.out.println("TupleWriter: Error in opening of TupleWriter");
-                System.exit(3);
-            }
             for(Tuple t : toSort) {
                 tw.next(t);
+                counter++;
             }
             tw.close();
-            numRuns++;
-            batch = base.next();
-        }
+            filenames.add(filename);
 
-        // TODO delete sorted runs generated
+            if(flag) {
+                System.out.println("GenerateSortedRuns wrote: " + counter + " tuples");
+                return;
+            }
+        }
     }
 
     /**
