@@ -35,11 +35,14 @@ public class Sort extends Operator {
      * Open file prepare a stream pointer to read input file
      */
     public boolean open() {
+        System.out.println("Sort.Open() called");
+        base.open();
         Batch b = base.next();
-        while(b != null) {
+        for(int i = 0; i < 10; i++) { // TODO arbitrary number of tuples
             tempStore.add(b);
             b = base.next();
         }
+        System.out.println("Sort.Open() completed successfully");
         return true;
     }
 
@@ -50,9 +53,7 @@ public class Sort extends Operator {
         if(tempStore.isEmpty()) {
             return null;
         }
-        Batch b = tempStore.get(0);
-        tempStore.remove(0);
-        return b;
+        return tempStore.remove(0);
     }
 
     /**
