@@ -4,8 +4,8 @@
 
 package qp.operators;
 
+import qp.utils.Attribute;
 import qp.utils.Batch;
-import qp.utils.Tuple;
 
 import java.util.ArrayList;
 
@@ -17,7 +17,7 @@ public class Sort extends Operator {
     Operator base;                 // Base table to sort
     ArrayList<Batch> tempStore;
 
-    public Sort(Operator base, int type) {
+    public Sort(Operator base, boolean isAsc, boolean isDesc, Attribute sortOn, int type) {
         super(type);
         this.base = base;
         tempStore = new ArrayList<>();

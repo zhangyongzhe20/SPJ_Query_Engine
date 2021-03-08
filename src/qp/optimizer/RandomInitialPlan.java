@@ -77,13 +77,12 @@ public class RandomInitialPlan {
 
     public void createSortOp() {
         // TODO: currently only supports single attribute sort
-        // TODO: cannot yet control direction of sort
         Sort op1 = null;
         for (int j = 0; j < orderbylist.size(); ++j) {
             Attribute a = orderbylist.get(j);
             String tabname = a.getTabName();
             Operator tempop = (Operator) tab_op_hash.get(tabname);
-            op1 = new Sort(tempop, OpType.SORT);
+            op1 = new Sort(tempop, sqlquery.isAsc(), sqlquery.isDesc(), a, OpType.SORT);
             /** set the schema same as base relation **/
             op1.setSchema(tempop.getSchema());
             modifyHashtable(tempop, op1);
