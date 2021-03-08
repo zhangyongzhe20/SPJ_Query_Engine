@@ -92,11 +92,16 @@ public class Sort extends Operator {
             Collections.sort(toSort, new AttrComparator(sortOn));
 
             //write sorted tuples
-            tw = new TupleWriter("SMTEMP-"+numRuns,batchSize);
+            tw = new TupleWriter("SMTEMP-"+numRuns,1000);
+            System.out.println("Batchsize:"+batchSize);
             for (Tuple t:toSort) {
                 System.out.println("qqqq");
-                tw.next(t);
+                if (t != null) {
+                    tw.next(t);
+                }
+
             }
+
         }
 
     }
