@@ -4,7 +4,10 @@
 
 package qp.operators;
 
+import qp.utils.Attribute;
 import qp.utils.Batch;
+
+import java.util.ArrayList;
 
 /**
  * Sort operator - sorts data from a file
@@ -12,9 +15,12 @@ import qp.utils.Batch;
 public class Sort extends Operator {
 
     Operator base;                 // Base table to sort
+    ArrayList<Batch> tempStore;
 
-    public Sort(int type) {
+    public Sort(Operator base, boolean isAsc, boolean isDesc, Attribute sortOn, int type) {
         super(type);
+        this.base = base;
+        tempStore = new ArrayList<>();
     }
 
     public Operator getBase() {
@@ -29,14 +35,25 @@ public class Sort extends Operator {
      * Open file prepare a stream pointer to read input file
      */
     public boolean open() {
-        return false;
+        System.out.println("Sort.Open() called");
+        base.open();
+        Batch b = base.next();
+        for(int i = 0; i < 10; i++) { // TODO arbitrary number of tuples
+            tempStore.add(b);
+            b = base.next();
+        }
+        System.out.println("Sort.Open() completed successfully");
+        return true;
     }
 
     /**
      * Next operator - get a tuple from the file
      **/
     public Batch next() {
-        return null;
+        if(tempStore.isEmpty()) {
+            return null;
+        }
+        return tempStore.remove(0);
     }
 
     /**
@@ -44,7 +61,7 @@ public class Sort extends Operator {
      * * is already reached
      **/
     public boolean close() {
-        return false;
+        return true;
     }
 
     public Object clone() {

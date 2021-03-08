@@ -66,10 +66,10 @@ public class RandomOptimizer {
                     //TODO add Sort first, or get compile error
                     ArrayList<Attribute> leftAttrs = new ArrayList<>();
                     leftAttrs.add(smj.getCondition().getLhs());
-                    smj.setLeft(new Sort(left, leftAttrs, numbuff));
+                    smj.setLeft(new Sort(left, false, false, new Attribute("Error in RandomOptimizer.java:69", ""), OpType.SORT)); // TODO smj.setLeft(new Sort(left, leftAttrs, numbuff));
                     ArrayList<Attribute> rightAttrs = new ArrayList<>();
                     rightAttrs.add((Attribute) smj.getCondition().getRhs());
-                    smj.setRight(new Sort(right, rightAttrs, numbuff));
+                    smj.setRight(new Sort(left, false, false, new Attribute("Error in RandomOptimizer.java:69", ""), OpType.SORT)); // TODO smj.setRight(new Sort(right, rightAttrs, numbuff));
 
                     smj.setNumBuff(numbuff);
 
