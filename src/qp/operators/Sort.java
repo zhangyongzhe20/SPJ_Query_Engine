@@ -21,7 +21,6 @@ import java.util.List;
 public class Sort extends Operator {
 
     Operator base;                 // Base table to sort
-    ArrayList<Batch> tempStore;
     int sortOn;
     int batchSize;
     int numBuff;
@@ -29,7 +28,6 @@ public class Sort extends Operator {
     public Sort(Operator base, boolean isAsc, boolean isDesc, int sortOn, int type, int numBuff) {
         super(type);
         this.base = base;
-        tempStore = new ArrayList<>();
         this.sortOn = sortOn;
         this.numBuff = numBuff;
     }
@@ -47,28 +45,16 @@ public class Sort extends Operator {
      */
     public boolean open() {
         System.out.println("Sort.Open() called");
-        if (!base.open()) {
-            return false;
-        }
+        base.open();
 
         //Create and prepare tuple reader
         int tupleSize = base.getSchema().getTupleSize();
         batchSize = Batch.getPageSize() / tupleSize;
-
-        /*tupleReader = new TupleReader(fileName, batchSize);
-        tupleReader.open();*/
-
-        //Get list of attributes(column index) to sort on
         Schema baseSchema = base.getSchema();
 
         generateSortedRuns();
 
-        /*base.open();
-        Batch b = base.next();
-        for(int i = 0; i < 10; i++) { // TODO arbitrary number of tuples
-            tempStore.add(b);
-            b = base.next();
-        }*/
+
         System.out.println("Sort.Open() completed successfully");
         return true;
     }
@@ -77,44 +63,42 @@ public class Sort extends Operator {
      * Next operator - get a tuple from the file
      **/
     public Batch next() {
-        if(tempStore.isEmpty()) {
-            return null;
-        }
-        return tempStore.remove(0);
+        return null;
     }
 
-    public void generateSortedRuns() {
 
+
+    /*Read in numBuff batches and add tuples to arraylist, sort arraylist, write to file*/
+    public void generateSortedRuns() {
+        TupleWriter tw;
+        ArrayList<Tuple> toSort = new ArrayList<>();
         int numRuns = 0;
         Batch batch = base.next();
-        System.out.println("ssssaaaaas");
         int numTuples = 0;
-        while(batch != null) {
-            List<Tuple> tuples = batch.getTuples();
-            Collections.sort(tuples, new AttrComparator(sortOn));
-            System.out.println("Sorted tuples:");
 
+        //read in tuples
+        while (batch != null) {
+            System.out.println("aaaaa");
+            for (int i=0; i<numBuff && batch!=null; i++) {
 
-
-            /*Brick run = new Brick(numBuff, batchSize);
-            System.out.println("bbbbb");
-            while(!run.isFull() && batch != null) {
-                System.out.println("bccccccc");
-                run.addBatch(batch);
+                //get all tuples in current batch
+                for (int j=0;j<batch.size();j++) {
+                    toSort.add(batch.get(j));
+                    System.out.println("ccccc");
+                }
+                System.out.println("bbbbb");
                 batch = base.next();
-            }*/
+            }
+            Collections.sort(toSort, new AttrComparator(sortOn));
 
-            numRuns++;
-            numTuples += tuples.size();
-
-
-            Brick sortedRun = new Brick(numBuff, batchSize);
-            sortedRun.setTuples(tuples);
-            File result = writeOutFile(sortedRun, numRuns);
-            batch = base.next();
-            /*
-            sortedFiles.add(result);*/
+            //write sorted tuples
+            tw = new TupleWriter("SMTEMP-"+numRuns,batchSize);
+            for (Tuple t:toSort) {
+                System.out.println("qqqq");
+                tw.next(t);
+            }
         }
+
     }
 
     /**
@@ -142,19 +126,6 @@ public class Sort extends Operator {
         }
     }
 
-    public File writeOutFile(Brick run, int numRuns) {
-        try {
-            File temp = new File( "-SMTemp-" + numRuns);
-            ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(temp));
-            for(Batch batch : run.getBatches()) {
-                out.writeObject(batch);
-            }
-            out.close();
-            return temp;
-        } catch (IOException io) {
-            System.out.println("SortMerge: writing the temporary file error");
-        }
-        return null;
-    }
+
 
 }
