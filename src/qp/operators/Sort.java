@@ -24,7 +24,7 @@ public class Sort extends Operator {
     int sortOn;
     int batchSize;
     int numBuff;
-    int numRuns = 0;
+    int numRuns;
     TupleReader tr;
 
     public Sort(Operator base, boolean isAsc, boolean isDesc, int sortOn, int type, int numBuff) {
@@ -32,6 +32,7 @@ public class Sort extends Operator {
         this.base = base;
         this.sortOn = sortOn;
         this.numBuff = numBuff;
+        this.numRuns = 0;
     }
 
     public Operator getBase() {
@@ -68,23 +69,24 @@ public class Sort extends Operator {
      * Next operator - get a tuple from the file
      **/
     public Batch next() {
-        if(tr == null) {
-            tr = new TupleReader("SMTEMP-0.out", batchSize);
-            tr.open();
-        }
-        Tuple t = tr.next();
-        Batch b = new Batch(batchSize);
-        while(t != null) {
-            b.add(t);
-            if(b.isFull()) {
-                return b;
-            }
-            t = tr.next();
-        }
-        if(b.isEmpty()) {
-            return null;
-        }
-        return b;
+        return null;
+//        if(tr == null) {
+//            tr = new TupleReader("SMTEMP-0.out", batchSize);
+//            tr.open();
+//        }
+//        Tuple t = tr.next();
+//        Batch b = new Batch(batchSize);
+//        while(t != null) {
+//            b.add(t);
+//            if(b.isFull()) {
+//                return b;
+//            }
+//            t = tr.next();
+//        }
+//        if(b.isEmpty()) {
+//            return null;
+//        }
+//        return b;
     }
 
 
@@ -96,9 +98,11 @@ public class Sort extends Operator {
 
         Batch batch = base.next();
 
+        System.out.println("numbuff = " + numBuff);
+
         while(batch != null) {
             toSort.clear();
-            for(int i = 0; i < 1000; i++) {
+            for(int i = 0; i < numBuff; i++) {
                 if(batch == null) {
                     break;
                 }
@@ -111,7 +115,7 @@ public class Sort extends Operator {
                 return;
             }
             toSort.sort(new AttrComparator(sortOn));
-            tw = new TupleWriter("SMTEMP-0.out", batchSize);
+            tw = new TupleWriter("SMTEMP-"+numRuns+".out", batchSize);
             if (!tw.open()) {
                 System.out.println("TupleWriter: Error in opening of TupleWriter");
                 System.exit(3);
@@ -121,6 +125,7 @@ public class Sort extends Operator {
             }
             tw.close();
             numRuns++;
+            batch = base.next();
         }
 
         // TODO delete sorted runs generated

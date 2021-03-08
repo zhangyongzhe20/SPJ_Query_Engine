@@ -81,7 +81,8 @@ public class RandomInitialPlan {
             int attrIndex = j;
             String tabname = orderbylist.get(j).getTabName();
             Operator tempop = (Operator) tab_op_hash.get(tabname);
-            op1 = new Sort(tempop, sqlquery.isAsc(), sqlquery.isDesc(), attrIndex, OpType.SORT, BufferManager.numBuffer);
+            // TODO previously had error trying to get numBuff to pass in, often 0 buffers
+            op1 = new Sort(tempop, sqlquery.isAsc(), sqlquery.isDesc(), attrIndex, OpType.SORT, 3);
             /** set the schema same as base relation **/
             op1.setSchema(tempop.getSchema());
             modifyHashtable(tempop, op1);
