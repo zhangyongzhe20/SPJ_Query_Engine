@@ -7,16 +7,20 @@ package qp.operators;
 import qp.utils.Batch;
 import qp.utils.Tuple;
 
+import java.util.ArrayList;
+
 /**
  * Sort operator - sorts data from a file
  */
 public class Sort extends Operator {
 
     Operator base;                 // Base table to sort
+    ArrayList<Batch> tempStore;
 
     public Sort(Operator base, int type) {
         super(type);
         this.base = base;
+        tempStore = new ArrayList<>();
     }
 
     public Operator getBase() {
@@ -32,9 +36,9 @@ public class Sort extends Operator {
      */
     public boolean open() {
         Batch b = base.next();
-        Debug.PPrint(b); // should be non-null
-        for(int i = 0; i < b.size(); i++) {
-            Debug.PPrint(b.get(i)); // should be non-null
+        while(b != null) {
+            tempStore.add(b);
+            b = base.next();
         }
         return true;
     }
@@ -43,8 +47,12 @@ public class Sort extends Operator {
      * Next operator - get a tuple from the file
      **/
     public Batch next() {
-        System.out.println("Sort.next() called");
-        return null;
+        if(tempStore.isEmpty()) {
+            return null;
+        }
+        Batch b = tempStore.get(0);
+        tempStore.remove(0);
+        return b;
     }
 
     /**
