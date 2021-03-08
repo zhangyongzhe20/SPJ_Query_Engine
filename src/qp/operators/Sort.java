@@ -47,7 +47,10 @@ public class Sort extends Operator {
      */
     public boolean open() {
         System.out.println("Sort.Open() called");
-        base.open();
+        if(!base.open()) {
+            System.out.println("Error in base.open() in sort");
+            System.exit(3);
+        }
 
         //Create and prepare tuple reader
         int tupleSize = base.getSchema().getTupleSize();
