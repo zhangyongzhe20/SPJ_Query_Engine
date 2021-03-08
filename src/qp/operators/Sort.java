@@ -66,7 +66,7 @@ public class Sort extends Operator {
      **/
     public Batch next() {
         if(tr == null) {
-            tr = new TupleReader("SMTEMP-0.out", numBuff);
+            tr = new TupleReader("SMTEMP-0.out", batchSize);
             tr.open();
         }
         Tuple t = tr.next();
@@ -92,10 +92,10 @@ public class Sort extends Operator {
         ArrayList<Tuple> toSort = new ArrayList<>();
 
         Batch batch = base.next();
-        int numTuples = 0;
+
         while(batch != null) {
             toSort.clear();
-            for(int i = 0; i < numBuff; i++) {
+            for(int i = 0; i < 1000; i++) {
                 if(batch == null) {
                     break;
                 }
@@ -108,7 +108,7 @@ public class Sort extends Operator {
                 return;
             }
             toSort.sort(new AttrComparator(sortOn));
-            tw = new TupleWriter("SMTEMP-"+numRuns+".out", batchSize);
+            tw = new TupleWriter("SMTEMP-0.out", batchSize);
             if (!tw.open()) {
                 System.out.println("TupleWriter: Error in opening of TupleWriter");
                 System.exit(3);
@@ -134,6 +134,7 @@ public class Sort extends Operator {
 
     public Object clone() {
         // TODO
+        System.out.println("CLONED");
         return null;
     }
 
