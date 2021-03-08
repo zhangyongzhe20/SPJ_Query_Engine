@@ -78,10 +78,11 @@ public class RandomInitialPlan {
         // TODO: currently only supports single attribute sort
         Sort op1 = null;
         for (int j = 0; j < orderbylist.size(); ++j) {
-            Attribute a = orderbylist.get(j);
-            String tabname = a.getTabName();
+            // TODO this is likely incorrect ---> int attrIndex = j;
+            String tabname = orderbylist.get(j).getTabName();
             Operator tempop = (Operator) tab_op_hash.get(tabname);
-            op1 = new Sort(tempop, sqlquery.isAsc(), sqlquery.isDesc(), a, OpType.SORT);
+            // TODO previously had error trying to get numBuff to pass in, often 0 buffers
+            op1 = new Sort(tempop, sqlquery.isAsc(), sqlquery.isDesc(), 1, OpType.SORT, 3);
             /** set the schema same as base relation **/
             op1.setSchema(tempop.getSchema());
             modifyHashtable(tempop, op1);

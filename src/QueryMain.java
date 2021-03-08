@@ -1,5 +1,6 @@
 /**
  * This is main driver program of the query processor
+ * java QueryMain query1.sql out.txt 100 1000
  **/
 
 import qp.operators.Debug;
