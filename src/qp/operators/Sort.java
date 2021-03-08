@@ -6,14 +6,8 @@ package qp.operators;
 
 import qp.utils.*;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
-import java.util.List;
 
 /**
  * Sort operator - sorts data from a file
