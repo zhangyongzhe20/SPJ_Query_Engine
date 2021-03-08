@@ -7,6 +7,9 @@ package qp.operators;
 import qp.utils.*;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -87,23 +90,29 @@ public class Sort extends Operator {
         System.out.println("ssssaaaaas");
         int numTuples = 0;
         while(batch != null) {
-            Brick run = new Brick(numBuff, batchSize);
+            List<Tuple> tuples = batch.getTuples();
+            Collections.sort(tuples, new AttrComparator(sortOn));
+            System.out.println("Sorted tuples:");
+
+
+
+            /*Brick run = new Brick(numBuff, batchSize);
             System.out.println("bbbbb");
             while(!run.isFull() && batch != null) {
                 System.out.println("bccccccc");
                 run.addBatch(batch);
                 batch = base.next();
-            }
+            }*/
 
             numRuns++;
-            List<Tuple> tuples = run.getTuples();
             numTuples += tuples.size();
-            Collections.sort(tuples, new AttrComparator(sortOn));
+
 
             Brick sortedRun = new Brick(numBuff, batchSize);
             sortedRun.setTuples(tuples);
-
-            /*File result = writeOutFile(sortedRun, numRuns);
+            File result = writeOutFile(sortedRun, numRuns);
+            batch = base.next();
+            /*
             sortedFiles.add(result);*/
         }
     }
@@ -131,6 +140,21 @@ public class Sort extends Operator {
         public int compare(Tuple t1, Tuple t2) {
             return Tuple.compareTuples(t1, t2, attrIndex);
         }
+    }
+
+    public File writeOutFile(Brick run, int numRuns) {
+        try {
+            File temp = new File( "-SMTemp-" + numRuns);
+            ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(temp));
+            for(Batch batch : run.getBatches()) {
+                out.writeObject(batch);
+            }
+            out.close();
+            return temp;
+        } catch (IOException io) {
+            System.out.println("SortMerge: writing the temporary file error");
+        }
+        return null;
     }
 
 }
