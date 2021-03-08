@@ -4,7 +4,6 @@
 
 package qp.optimizer;
 
-import org.w3c.dom.Attr;
 import qp.operators.*;
 import qp.utils.*;
 
