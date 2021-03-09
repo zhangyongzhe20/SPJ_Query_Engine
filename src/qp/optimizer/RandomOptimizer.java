@@ -69,7 +69,7 @@ public class RandomOptimizer {
                     leftAttrs.add(smj.getCondition().getLhs());
                     ArrayList<Attribute> rightAttrs = new ArrayList<>();
                     rightAttrs.add((Attribute) smj.getCondition().getRhs());
-                    smj.setRight(new Sort(left, false, false, 0, OpType.SORT, BufferManager.getBuffersPerJoin())); // TODO smj.setRight(new Sort(right, rightAttrs, numbuff));
+                    smj.setRight(new Sort(left, false, false, rightAttrs, OpType.SORT, BufferManager.getBuffersPerJoin())); // TODO smj.setRight(new Sort(right, rightAttrs, numbuff));
 
                     smj.setNumBuff(numbuff);
 

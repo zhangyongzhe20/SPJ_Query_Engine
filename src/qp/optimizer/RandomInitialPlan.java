@@ -75,18 +75,17 @@ public class RandomInitialPlan {
     }
 
     public void createSortOp() {
-        // TODO: currently only supports single attribute sort
+        // TODO: sub-task: aim to support multi attribute sort on a single table
+        // TODO: sub-task: support multi attribute sort on 2 or more tables
         Sort op1 = null;
-        for (int j = 0; j < orderbylist.size(); ++j) {
-            // TODO this is likely incorrect ---> int attrIndex = j;
-            String tabname = orderbylist.get(j).getTabName();
-            Operator tempop = (Operator) tab_op_hash.get(tabname);
-            // TODO previously had error trying to get numBuff to pass in, often 0 buffers
-            op1 = new Sort(tempop, sqlquery.isAsc(), sqlquery.isDesc(), 1, OpType.SORT, 3);
-            /** set the schema same as base relation **/
-            op1.setSchema(tempop.getSchema());
-            modifyHashtable(tempop, op1);
-        }
+
+        String tabname = orderbylist.get(0).getTabName();
+        Operator tempop = (Operator) tab_op_hash.get(tabname);
+        // TODO previously had error trying to get numBuff to pass in, often 0 buffers
+        op1 = new Sort(tempop, sqlquery.isAsc(), sqlquery.isDesc(), orderbylist, OpType.SORT, 3);
+        /** set the schema same as base relation **/
+        op1.setSchema(tempop.getSchema());
+        modifyHashtable(tempop, op1);
 
         /** The last selection is the root of the plan tre
          ** constructed thus far
