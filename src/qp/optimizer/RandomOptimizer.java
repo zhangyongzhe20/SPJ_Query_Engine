@@ -64,7 +64,6 @@ public class RandomOptimizer {
                     return bnj;
                 case JoinType.SORTMERGE:
                     SortMergeJoin smj = new SortMergeJoin((Join) node);
-                    //TODO add Sort first, or get compile error
                     ArrayList<Attribute> leftAttrs = new ArrayList<>();
                     leftAttrs.add(smj.getCondition().getLhs());
                     ArrayList<Attribute> rightAttrs = new ArrayList<>();

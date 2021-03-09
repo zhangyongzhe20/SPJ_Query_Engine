@@ -53,7 +53,10 @@ public class SortMergeJoin extends Join{
      */
     @Override
     public boolean open(){
-        left.open();
+        if(!left.open() || !right.open()){
+//            System.out.println("can not open left and right");
+            return false;
+        }
         right.open();
         //calculate the batch size
         batchSize = Batch.getPageSize() / schema.getTupleSize();
