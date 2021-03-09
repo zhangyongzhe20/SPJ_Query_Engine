@@ -4,9 +4,9 @@
 
 package qp.operators;
 
-import org.w3c.dom.Attr;
 import qp.utils.*;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Comparator;
 
@@ -19,20 +19,17 @@ public class Sort extends Operator {
     ArrayList<Attribute> sortOn;
     int batchSize;
     int numBuff;
-    ArrayList<String> filenames;
-    int currFile;
     boolean eof;
     TupleReader tr;
     boolean isDesc;
     Schema schema;
+    String completeFile;
 
     public Sort(Operator base, boolean isAsc, boolean isDesc, ArrayList<Attribute> sortOn, int type, int numBuff) {
         super(type);
         this.base = base;
         this.sortOn = sortOn;
         this.numBuff = numBuff;
-        filenames = new ArrayList<>();
-        currFile = 0;
         eof = false;
         this.isDesc = isDesc;
     }
@@ -61,11 +58,128 @@ public class Sort extends Operator {
 
         this.schema = base.getSchema(); // TODO or should it be this.getSchema()?
 
-        generateSortedRuns();
+        ArrayList<String> filenames = generateSortedRuns();
+        System.out.println(filenames);
 
+        while(filenames.size() != 1) {
+            ArrayList<ArrayList<String>> runGroups = groupRuns(numBuff - 1, filenames);
+            filenames.clear();
+            for(ArrayList<String> runGroup : runGroups) {
+                System.out.println("rungrps : " + runGroup);
+                // dont merge last run if it is a single run
+                if(runGroup.size() == 1) {
+                    filenames.add(runGroup.get(0));
+                    continue;
+                }
+                String output = merge(runGroup);
+                filenames.add(output);
+            }
+        }
+
+        this.completeFile = filenames.get(0);
 
         System.out.println("Sort.Open() completed successfully");
         return true;
+    }
+
+    // runGroup must be at least 2 files in size
+    private String merge(ArrayList<String> runGroup) {
+
+        // give 1 buffer to each run
+        int limit = Math.min(runGroup.size(), numBuff-1); // may waste buffers but check correctness first
+        System.out.println("limit: " + limit);
+        // init output file
+        String outname = "next"+runGroup.get(0);
+        TupleWriter output = new TupleWriter(outname, batchSize);
+        if(!output.open()) {
+            System.out.println("Error in TESTFILE.open() in sort.merge()");
+            System.exit(3);
+        }
+
+        // init tupleReaders
+        ArrayList<TupleReader> trs = new ArrayList<>(limit);
+        for(int i = 0; i < limit; i++) {
+            TupleReader tr = new TupleReader(runGroup.get(i), batchSize);
+            if(!tr.open()) {
+                System.out.println("Error in treader.open() in sort.merge()");
+                System.exit(3);
+            }
+            trs.add(tr);
+        }
+
+        // bring in first batch of tuples
+        Tuple[] inMem = new Tuple[trs.size()];
+        for(int i = 0; i < trs.size(); i++) {
+            inMem[i] = (trs.get(i).next());
+        }
+
+        while(true) {
+            int i = getIndexOfMinTuple(inMem);
+
+            // clean up resources
+            if(i == -1) {
+                for(TupleReader tr : trs) {
+                    tr.close();
+                }
+                for(String r : runGroup) {
+                    File f = new File(r);
+                    f.delete();
+                }
+                output.close();
+                return outname;
+            }
+
+            output.next(inMem[i]);
+
+            inMem[i] = trs.get(i).next();
+        }
+    }
+
+    // returns -1 to signal no more tuples
+    private int getIndexOfMinTuple(Tuple[] inMem) {
+
+        Tuple currSmallest = null;
+        for(Tuple t : inMem) {
+            if(t != null) {
+                currSmallest = t;
+                break;
+            }
+        }
+        if(currSmallest == null) {
+            return -1;
+        }
+        // the array has atleast one non-null element
+
+        int indexOfSmallest = -1;
+        for(int i = 0; i < inMem.length; i++) {
+            if(inMem[i] == null) {
+                continue;
+            }
+            // get index of smaller tuple
+            AttrComparator ac = new AttrComparator(sortOn, schema);
+            if(ac.compare(currSmallest, inMem[i]) >= 0) {
+                indexOfSmallest = i;
+                currSmallest = inMem[i];
+            }
+        }
+        return indexOfSmallest;
+    }
+
+    // splits filenames into groups of size at most n
+    private ArrayList<ArrayList<String>> groupRuns(int n, ArrayList<String> filenames) {
+        ArrayList<ArrayList<String>> all = new ArrayList<>();
+        ArrayList<String> group = new ArrayList<>();
+        for(String file : filenames) {
+            group.add(file);
+            if(group.size() == n) {
+                all.add(group);
+                group = new ArrayList<>();
+            }
+        }
+        if(!group.isEmpty()) {
+            all.add(group);
+        }
+        return all;
     }
 
     /**
@@ -78,7 +192,7 @@ public class Sort extends Operator {
         }
 
         if(tr == null) {
-            tr = new TupleReader("SMTEMP-0.out", batchSize);
+            tr = new TupleReader(completeFile, batchSize);
             if(!tr.open()) {
                 System.out.println("Error opening tr in Sort.next()");
                 System.exit(3);
@@ -90,20 +204,8 @@ public class Sort extends Operator {
             Tuple t = tr.next();
             if(t == null) {
                 tr.close();
-                if(currFile == filenames.size() - 1) {
-                    eof = true;
-                    if(b.isEmpty()) {
-                        return null;
-                    }
-                    return b;
-                }
-                tr = new TupleReader(filenames.get(currFile + 1), batchSize);
-                if(!tr.open()) {
-                    System.out.println("Error opening tr in Sort.next()");
-                    System.exit(3);
-                }
-                currFile++;
-                break;
+                eof = true;
+                return b;
             }
             b.add(t);
         }
@@ -113,7 +215,9 @@ public class Sort extends Operator {
 
 
     /*Read in numBuff batches and add tuples to arraylist, sort arraylist, write to file*/
-    public void generateSortedRuns() {
+    private ArrayList<String> generateSortedRuns() {
+        ArrayList<String> filenames = new ArrayList<>();
+
         TupleWriter tw;
         ArrayList<Tuple> toSort = new ArrayList<>();
 
@@ -152,7 +256,7 @@ public class Sort extends Operator {
 
             if(flag) {
                 System.out.println("GenerateSortedRuns wrote: " + counter + " tuples");
-                return;
+                return filenames;
             }
         }
     }
@@ -163,6 +267,8 @@ public class Sort extends Operator {
      **/
     public boolean close() {
         // TODO
+        File f = new File(completeFile);
+        f.delete();
         return true;
     }
 
