@@ -66,11 +66,13 @@ public class RandomOptimizer {
                     SortMergeJoin smj = new SortMergeJoin((Join) node);
                     ArrayList<Attribute> leftAttrs = new ArrayList<>();
                     leftAttrs.add(smj.getCondition().getLhs());
+                    smj.setLeft(new Sort(left, false, false, leftAttrs, OpType.SORT, BufferManager.getBuffersPerJoin()));
                     ArrayList<Attribute> rightAttrs = new ArrayList<>();
                     rightAttrs.add((Attribute) smj.getCondition().getRhs());
-                    smj.setRight(new Sort(left, false, false, rightAttrs, OpType.SORT, BufferManager.getBuffersPerJoin())); // TODO smj.setRight(new Sort(right, rightAttrs, numbuff));
+                    smj.setRight(new Sort(right, false, false, rightAttrs, OpType.SORT, BufferManager.getBuffersPerJoin())); // TODO smj.setRight(new Sort(right, rightAttrs, numbuff));
 
                     smj.setNumBuff(numbuff);
+                    return smj;
 
                 default:
                     return node;

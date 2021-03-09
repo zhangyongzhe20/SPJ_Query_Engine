@@ -41,7 +41,6 @@ public class SortMergeJoin extends Join{
      */
     public SortMergeJoin(Join basejn) {
         super(basejn.getLeft(), basejn.getRight(), basejn.getCondition(), basejn.getOpType());
-        //TODO others
         schema = basejn.getSchema();
         jointype = basejn.getJoinType();
         numBuff = basejn.getNumBuff();
@@ -51,13 +50,13 @@ public class SortMergeJoin extends Join{
      *
      * @return true if the operator open successfully
      */
-    @Override
+
     public boolean open(){
         if(!left.open() || !right.open()){
 //            System.out.println("can not open left and right");
             return false;
         }
-        right.open();
+
         //calculate the batch size
         batchSize = Batch.getPageSize() / schema.getTupleSize();
         // get the leftIndex and rightIndex; TODO: only implemented one condition
@@ -65,10 +64,9 @@ public class SortMergeJoin extends Join{
         rightTupleIndex = right.getSchema().indexOf((Attribute) getCondition().getRhs());
         // get the join attribute; TODO: only implemented one condition
         joinAttrType = left.getSchema().typeOf(conditionList.get(0).getLhs());
-        return super.open();
+        return true;
     }
 
-    @Override
     public Batch next(){
         Batch output = new Batch(batchSize);
         //initial left and right tuple with index = 0
