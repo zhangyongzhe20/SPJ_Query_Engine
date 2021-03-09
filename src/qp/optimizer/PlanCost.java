@@ -116,6 +116,7 @@ public class PlanCost {
          ** buffer capacity, i.e., number of tuples per page **/
         long tuplesize = node.getSchema().getTupleSize();
         long outcapacity = Math.max(1, Batch.getPageSize() / tuplesize);
+        //todo, leftschema is null
         long leftuplesize = leftschema.getTupleSize();
         long leftcapacity = Math.max(1, Batch.getPageSize() / leftuplesize);
         long righttuplesize = rightschema.getTupleSize();
@@ -147,6 +148,7 @@ public class PlanCost {
         long numbuff = BufferManager.getBuffersPerJoin();
         long joincost;
 
+        System.out.println("ht: " + ht);
         switch (joinType) {
             case JoinType.NESTEDJOIN:
                 joincost = leftpages * rightpages;
@@ -155,7 +157,7 @@ public class PlanCost {
                 double l = leftpages;
                 double b = numbuff - 2;
                 double lb = l / b;
-                //joincost = leftpages + (int) Math.ceil(lb) * rightpages;
+                joincost = leftpages + (int) Math.ceil(lb) * rightpages;
                 joincost = 100000;
                 break;
             case JoinType.SORTMERGE:

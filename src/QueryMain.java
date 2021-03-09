@@ -180,6 +180,7 @@ public class QueryMain {
         while ((resultbatch = root.next()) != null) {
             for (int i = 0; i < resultbatch.size(); ++i) {
                 printTuple(resultbatch.get(i));
+                System.out.println(resultbatch.get(i));
             }
         }
         root.close();
