@@ -68,15 +68,21 @@ public class Sort extends Operator {
             filenames.clear();
             for(ArrayList<String> runGroup : runGroups) {
                 System.out.println(runGroup);
-//                String output = merge(runGroup);
-//                filenames.add(output);
+                String output = merge(runGroup);
+                filenames.add(output);
             }
         }
 
-        // TODO set sorted filename
+        // TODO: set as instance var
+        System.out.println("Sorted file in: " + filenames.get(0));
 
         System.out.println("Sort.Open() completed successfully");
         return true;
+    }
+
+    private String merge(ArrayList<String> runGroup) {
+        // TODO
+        return "";
     }
 
     // splits filenames into groups of size at most n
