@@ -22,6 +22,7 @@ public class Sort extends Operator {
     int currFile;
     boolean eof;
     TupleReader tr;
+    boolean isDesc;
 
     public Sort(Operator base, boolean isAsc, boolean isDesc, int sortOn, int type, int numBuff) {
         super(type);
@@ -31,6 +32,7 @@ public class Sort extends Operator {
         filenames = new ArrayList<>();
         currFile = 0;
         eof = false;
+        this.isDesc = isDesc;
     }
 
     public Operator getBase() {
@@ -175,7 +177,11 @@ public class Sort extends Operator {
 
         @Override
         public int compare(Tuple t1, Tuple t2) {
-            return Tuple.compareTuples(t1, t2, attrIndex);
+            if(isDesc) {
+                return -Tuple.compareTuples(t1, t2, attrIndex);
+            } else {
+                return Tuple.compareTuples(t1, t2, attrIndex);
+            }
         }
     }
 }
