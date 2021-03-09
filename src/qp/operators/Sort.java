@@ -68,7 +68,7 @@ public class Sort extends Operator {
             ArrayList<ArrayList<String>> runGroups = groupRuns(numBuff - 1, filenames);
             filenames.clear();
             for(ArrayList<String> runGroup : runGroups) {
-                System.out.println(runGroup);
+                System.out.println("rungrps : " + runGroup);
                 // dont merge last run if it is a single run
                 if(runGroup.size() == 1) {
                     continue;
@@ -93,7 +93,7 @@ public class Sort extends Operator {
 
         // give 1 buffer to each run
         int limit = Math.min(runGroup.size(), numBuff-1); // may waste buffers but check correctness first
-
+        System.out.println("limit: " + limit);
         // init output file
         String outname = "next"+runGroup.get(0);
         TupleWriter output = new TupleWriter(outname, batchSize);
@@ -161,6 +161,7 @@ public class Sort extends Operator {
             AttrComparator ac = new AttrComparator(sortOn, base.getSchema());
             if(ac.compare(currSmallest, inMem[i]) >= 0) { // TODO someone pls check this
                 indexOfSmallest = i;
+                currSmallest = inMem[i];
             }
         }
         return indexOfSmallest;
