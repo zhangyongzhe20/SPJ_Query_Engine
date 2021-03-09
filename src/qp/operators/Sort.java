@@ -68,6 +68,7 @@ public class Sort extends Operator {
                 System.out.println("rungrps : " + runGroup);
                 // dont merge last run if it is a single run
                 if(runGroup.size() == 1) {
+                    filenames.add(runGroup.get(0));
                     continue;
                 }
                 String output = merge(runGroup);
