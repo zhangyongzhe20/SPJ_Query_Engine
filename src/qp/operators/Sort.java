@@ -6,6 +6,7 @@ package qp.operators;
 
 import qp.utils.*;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Comparator;
 
@@ -18,12 +19,10 @@ public class Sort extends Operator {
     ArrayList<Attribute> sortOn;
     int batchSize;
     int numBuff;
-    int currFile;
     boolean eof;
     TupleReader tr;
     boolean isDesc;
     Schema schema;
-    ArrayList<String> fn;
     String completeFile;
 
     public Sort(Operator base, boolean isAsc, boolean isDesc, ArrayList<Attribute> sortOn, int type, int numBuff) {
@@ -31,7 +30,6 @@ public class Sort extends Operator {
         this.base = base;
         this.sortOn = sortOn;
         this.numBuff = numBuff;
-        currFile = 0;
         eof = false;
         this.isDesc = isDesc;
     }
@@ -62,7 +60,6 @@ public class Sort extends Operator {
 
         ArrayList<String> filenames = generateSortedRuns();
         System.out.println(filenames);
-        fn = filenames;
 
         while(filenames.size() != 1) {
             ArrayList<ArrayList<String>> runGroups = groupRuns(numBuff - 1, filenames);
@@ -78,9 +75,7 @@ public class Sort extends Operator {
             }
         }
 
-        // TODO: set as instance var
         this.completeFile = filenames.get(0);
-        System.out.println("Completefile at: " + completeFile);
 
         System.out.println("Sort.Open() completed successfully");
         return true;
@@ -88,8 +83,6 @@ public class Sort extends Operator {
 
     // runGroup must be at least 2 files in size
     private String merge(ArrayList<String> runGroup) {
-
-        // TODO handle multiple buffers
 
         // give 1 buffer to each run
         int limit = Math.min(runGroup.size(), numBuff-1); // may waste buffers but check correctness first
@@ -127,6 +120,10 @@ public class Sort extends Operator {
                 for(TupleReader tr : trs) {
                     tr.close();
                 }
+                for(String r : runGroup) {
+                    File f = new File(r);
+                    f.delete();
+                }
                 output.close();
                 return outname;
             }
@@ -158,8 +155,8 @@ public class Sort extends Operator {
                 continue;
             }
             // get index of smaller tuple
-            AttrComparator ac = new AttrComparator(sortOn, base.getSchema());
-            if(ac.compare(currSmallest, inMem[i]) >= 0) { // TODO someone pls check this
+            AttrComparator ac = new AttrComparator(sortOn, schema);
+            if(ac.compare(currSmallest, inMem[i]) >= 0) {
                 indexOfSmallest = i;
                 currSmallest = inMem[i];
             }
@@ -269,6 +266,8 @@ public class Sort extends Operator {
      **/
     public boolean close() {
         // TODO
+        File f = new File(completeFile);
+        f.delete();
         return true;
     }
 
