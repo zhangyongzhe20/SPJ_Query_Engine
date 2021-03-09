@@ -63,8 +63,37 @@ public class Sort extends Operator {
         System.out.println(filenames);
         fn = filenames;
 
+        while(filenames.size() != 1) {
+            ArrayList<ArrayList<String>> runGroups = groupRuns(numBuff - 1, filenames);
+            filenames.clear();
+            for(ArrayList<String> runGroup : runGroups) {
+                System.out.println(runGroup);
+//                String output = merge(runGroup);
+//                filenames.add(output);
+            }
+        }
+
+        // TODO set sorted filename
+
         System.out.println("Sort.Open() completed successfully");
         return true;
+    }
+
+    // splits filenames into groups of size at most n
+    private ArrayList<ArrayList<String>> groupRuns(int n, ArrayList<String> filenames) {
+        ArrayList<ArrayList<String>> all = new ArrayList<>();
+        ArrayList<String> group = new ArrayList<>();
+        for(int i = 0; i < filenames.size(); i++) {
+            group.add(filenames.get(i));
+            if(group.size() == n) {
+                all.add(group);
+                group = new ArrayList<>();
+            }
+        }
+        if(!group.isEmpty()) {
+            all.add(group);
+        }
+        return all;
     }
 
     /**
