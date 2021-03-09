@@ -4,6 +4,7 @@
 
 package qp.operators;
 
+import org.w3c.dom.Attr;
 import qp.utils.*;
 
 import java.util.ArrayList;
@@ -15,7 +16,7 @@ import java.util.Comparator;
 public class Sort extends Operator {
 
     Operator base;                 // Base table to sort
-    int sortOn;
+    ArrayList<Attribute> sortOn;
     int batchSize;
     int numBuff;
     ArrayList<String> filenames;
@@ -23,8 +24,9 @@ public class Sort extends Operator {
     boolean eof;
     TupleReader tr;
     boolean isDesc;
+    Schema schema;
 
-    public Sort(Operator base, boolean isAsc, boolean isDesc, int sortOn, int type, int numBuff) {
+    public Sort(Operator base, boolean isAsc, boolean isDesc, ArrayList<Attribute> sortOn, int type, int numBuff) {
         super(type);
         this.base = base;
         this.sortOn = sortOn;
@@ -56,6 +58,8 @@ public class Sort extends Operator {
         //Create and prepare tuple reader
         int tupleSize = base.getSchema().getTupleSize();
         batchSize = Batch.getPageSize() / tupleSize;
+
+        this.schema = base.getSchema(); // TODO or should it be this.getSchema()?
 
         generateSortedRuns();
 
@@ -138,7 +142,7 @@ public class Sort extends Operator {
                     toSort.add(batch.get(j));
                 }
             }
-            toSort.sort(new AttrComparator(sortOn));
+            toSort.sort(new AttrComparator(sortOn, schema));
             for(Tuple t : toSort) {
                 tw.next(t);
                 counter++;
@@ -169,18 +173,22 @@ public class Sort extends Operator {
     }
 
     class AttrComparator implements Comparator<Tuple> {
-        private int attrIndex;
+        private ArrayList<Integer> sortOnIndex;
 
-        public AttrComparator(int attrIndex) {
-            this.attrIndex = attrIndex;
+        public AttrComparator(ArrayList<Attribute> sortOn, Schema schema) {
+            this.sortOnIndex = new ArrayList<>();
+            for(Attribute a : sortOn) {
+                int index = schema.indexOf(a);
+                sortOnIndex.add(index);
+            }
         }
 
         @Override
         public int compare(Tuple t1, Tuple t2) {
             if(isDesc) {
-                return -Tuple.compareTuples(t1, t2, attrIndex);
+                return -Tuple.compareTuples(t1, t2, sortOnIndex, sortOnIndex);
             } else {
-                return Tuple.compareTuples(t1, t2, attrIndex);
+                return Tuple.compareTuples(t1, t2, sortOnIndex, sortOnIndex);
             }
         }
     }
