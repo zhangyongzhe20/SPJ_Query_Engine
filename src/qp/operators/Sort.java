@@ -24,6 +24,7 @@ public class Sort extends Operator {
     boolean isDesc;
     Schema schema;
     ArrayList<String> fn;
+    String completeFile;
 
     public Sort(Operator base, boolean isAsc, boolean isDesc, ArrayList<Attribute> sortOn, int type, int numBuff) {
         super(type);
@@ -68,21 +69,101 @@ public class Sort extends Operator {
             filenames.clear();
             for(ArrayList<String> runGroup : runGroups) {
                 System.out.println(runGroup);
+                // dont merge last run if it is a single run
+                if(runGroup.size() == 1) {
+                    continue;
+                }
                 String output = merge(runGroup);
                 filenames.add(output);
             }
         }
 
         // TODO: set as instance var
-        System.out.println("Sorted file in: " + filenames.get(0));
+        this.completeFile = filenames.get(0);
+        System.out.println("Completefile at: " + completeFile);
 
         System.out.println("Sort.Open() completed successfully");
         return true;
     }
 
+    // runGroup must be at least 2 files in size
     private String merge(ArrayList<String> runGroup) {
-        // TODO
-        return "";
+
+        // TODO handle multiple buffers
+
+        // give 1 buffer to each run
+        int limit = Math.min(runGroup.size(), numBuff-1); // may waste buffers but check correctness first
+
+        // init output file
+        String outname = "next"+runGroup.get(0);
+        TupleWriter output = new TupleWriter(outname, batchSize);
+        if(!output.open()) {
+            System.out.println("Error in TESTFILE.open() in sort.merge()");
+            System.exit(3);
+        }
+
+        // init tupleReaders
+        ArrayList<TupleReader> trs = new ArrayList<>(limit);
+        for(int i = 0; i < limit; i++) {
+            TupleReader tr = new TupleReader(runGroup.get(i), batchSize);
+            if(!tr.open()) {
+                System.out.println("Error in treader.open() in sort.merge()");
+                System.exit(3);
+            }
+            trs.add(tr);
+        }
+
+        // bring in first batch of tuples
+        Tuple[] inMem = new Tuple[trs.size()];
+        for(int i = 0; i < trs.size(); i++) {
+            inMem[i] = (trs.get(i).next());
+        }
+
+        while(true) {
+            int i = getIndexOfMinTuple(inMem);
+
+            // clean up resources
+            if(i == -1) {
+                for(TupleReader tr : trs) {
+                    tr.close();
+                }
+                output.close();
+                return outname;
+            }
+
+            output.next(inMem[i]);
+
+            inMem[i] = trs.get(i).next();
+        }
+    }
+
+    // returns -1 to signal no more tuples
+    private int getIndexOfMinTuple(Tuple[] inMem) {
+
+        Tuple currSmallest = null;
+        for(Tuple t : inMem) {
+            if(t != null) {
+                currSmallest = t;
+                break;
+            }
+        }
+        if(currSmallest == null) {
+            return -1;
+        }
+        // the array has atleast one non-null element
+
+        int indexOfSmallest = -1;
+        for(int i = 0; i < inMem.length; i++) {
+            if(inMem[i] == null) {
+                continue;
+            }
+            // get index of smaller tuple
+            AttrComparator ac = new AttrComparator(sortOn, base.getSchema());
+            if(ac.compare(currSmallest, inMem[i]) >= 0) { // TODO someone pls check this
+                indexOfSmallest = i;
+            }
+        }
+        return indexOfSmallest;
     }
 
     // splits filenames into groups of size at most n
@@ -112,7 +193,7 @@ public class Sort extends Operator {
         }
 
         if(tr == null) {
-            tr = new TupleReader("SMTEMP-0.out", batchSize);
+            tr = new TupleReader(completeFile, batchSize);
             if(!tr.open()) {
                 System.out.println("Error opening tr in Sort.next()");
                 System.exit(3);
@@ -124,20 +205,8 @@ public class Sort extends Operator {
             Tuple t = tr.next();
             if(t == null) {
                 tr.close();
-                if(currFile == fn.size() - 1) {
-                    eof = true;
-                    if(b.isEmpty()) {
-                        return null;
-                    }
-                    return b;
-                }
-                tr = new TupleReader(fn.get(currFile + 1), batchSize);
-                if(!tr.open()) {
-                    System.out.println("Error opening tr in Sort.next()");
-                    System.exit(3);
-                }
-                currFile++;
-                break;
+                eof = true;
+                return b;
             }
             b.add(t);
         }
