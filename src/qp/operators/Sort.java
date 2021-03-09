@@ -4,7 +4,6 @@
 
 package qp.operators;
 
-import org.w3c.dom.Attr;
 import qp.utils.*;
 
 import java.util.ArrayList;
@@ -19,19 +18,18 @@ public class Sort extends Operator {
     ArrayList<Attribute> sortOn;
     int batchSize;
     int numBuff;
-    ArrayList<String> filenames;
     int currFile;
     boolean eof;
     TupleReader tr;
     boolean isDesc;
     Schema schema;
+    ArrayList<String> fn;
 
     public Sort(Operator base, boolean isAsc, boolean isDesc, ArrayList<Attribute> sortOn, int type, int numBuff) {
         super(type);
         this.base = base;
         this.sortOn = sortOn;
         this.numBuff = numBuff;
-        filenames = new ArrayList<>();
         currFile = 0;
         eof = false;
         this.isDesc = isDesc;
@@ -61,8 +59,9 @@ public class Sort extends Operator {
 
         this.schema = base.getSchema(); // TODO or should it be this.getSchema()?
 
-        generateSortedRuns();
-
+        ArrayList<String> filenames = generateSortedRuns();
+        System.out.println(filenames);
+        fn = filenames;
 
         System.out.println("Sort.Open() completed successfully");
         return true;
@@ -90,14 +89,14 @@ public class Sort extends Operator {
             Tuple t = tr.next();
             if(t == null) {
                 tr.close();
-                if(currFile == filenames.size() - 1) {
+                if(currFile == fn.size() - 1) {
                     eof = true;
                     if(b.isEmpty()) {
                         return null;
                     }
                     return b;
                 }
-                tr = new TupleReader(filenames.get(currFile + 1), batchSize);
+                tr = new TupleReader(fn.get(currFile + 1), batchSize);
                 if(!tr.open()) {
                     System.out.println("Error opening tr in Sort.next()");
                     System.exit(3);
@@ -113,7 +112,9 @@ public class Sort extends Operator {
 
 
     /*Read in numBuff batches and add tuples to arraylist, sort arraylist, write to file*/
-    public void generateSortedRuns() {
+    private ArrayList<String> generateSortedRuns() {
+        ArrayList<String> filenames = new ArrayList<>();
+
         TupleWriter tw;
         ArrayList<Tuple> toSort = new ArrayList<>();
 
@@ -152,7 +153,7 @@ public class Sort extends Operator {
 
             if(flag) {
                 System.out.println("GenerateSortedRuns wrote: " + counter + " tuples");
-                return;
+                return filenames;
             }
         }
     }
