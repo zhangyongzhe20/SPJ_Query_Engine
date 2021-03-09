@@ -83,8 +83,8 @@ public class Sort extends Operator {
     private ArrayList<ArrayList<String>> groupRuns(int n, ArrayList<String> filenames) {
         ArrayList<ArrayList<String>> all = new ArrayList<>();
         ArrayList<String> group = new ArrayList<>();
-        for(int i = 0; i < filenames.size(); i++) {
-            group.add(filenames.get(i));
+        for(String file : filenames) {
+            group.add(file);
             if(group.size() == n) {
                 all.add(group);
                 group = new ArrayList<>();
