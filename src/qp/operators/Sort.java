@@ -38,6 +38,8 @@ public class Sort extends Operator {
         return base;
     }
 
+    public int getNumBuff() {return numBuff;}
+
     public void setBase(Operator base) {
         this.base = base;
     }
@@ -266,16 +268,17 @@ public class Sort extends Operator {
      * * is already reached
      **/
     public boolean close() {
-        // TODO
         File f = new File(completeFile);
         f.delete();
         return true;
     }
 
     public Object clone() {
-        // TODO
-        System.out.println("CLONED");
-        return null;
+        Operator newbase = (Operator) base.clone();
+        ArrayList<Attribute> newSortOn = (ArrayList<Attribute>) sortOn.clone();
+        Sort newsort = new Sort(newbase, false, isDesc, newSortOn, optype, numBuff);
+        newsort.setSchema((Schema) newbase.getSchema().clone());
+        return newsort;
     }
 
     class AttrComparator implements Comparator<Tuple> {

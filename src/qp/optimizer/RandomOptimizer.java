@@ -385,9 +385,7 @@ public class RandomOptimizer {
         } else if (node.getOpType() == OpType.PROJECT) {
             return findNodeAt(((Project) node).getBase(), joinNum);
         } else if (node.getOpType() == OpType.SORT) {
-            // TODO?
-            System.out.println("Please implement RandomOptimizer.java:373");
-            return node;
+            return findNodeAt(((Sort) node).getBase(), joinNum);
         } else {
             return null;
         }

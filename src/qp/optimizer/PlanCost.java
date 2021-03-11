@@ -85,9 +85,10 @@ public class PlanCost {
     }
 
     protected long getStatistics(Sort node) {
-        // TODO: use stats file for given table to calculate cost
-        System.out.println("Please implement plan cost for sort in PlanCost.java:89");
-        return 0;
+        long tuples =  calculateCost(node.getBase());
+        double c = 2 * tuples * (1 + Math.ceil(Math.log(Math.ceil((double)(tuples / node.getNumBuff()))) / Math.log(node.getNumBuff() - 1)));
+        cost = cost + (long) c;
+        return tuples; // no change
     }
 
     /**
