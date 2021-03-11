@@ -36,6 +36,7 @@ public class RandomInitialPlan {
         groupbylist = sqlquery.getGroupByList();
         numJoin = joinlist.size();
         orderbylist = sqlquery.getOrderByList();
+        System.out.println("RIP: ORDER BY LIST SIZE:"+orderbylist.size());
     }
 
     /**
@@ -221,6 +222,7 @@ public class RandomInitialPlan {
         Distinct operator = new Distinct(root, sqlquery.isAsc(), sqlquery.isDesc(), orderbylist, OpType.DISTINCT, 7);
         operator.setSchema(root.getSchema());
         root = operator;
+
     }
 
     private void modifyHashtable(Operator old, Operator newop) {

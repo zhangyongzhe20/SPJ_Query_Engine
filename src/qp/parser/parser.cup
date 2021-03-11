@@ -144,6 +144,7 @@ sqlquery ::= SELECT attlist:a FROM tablelist:t WHERE conditionlist:c
 		| SELECT DISTINCT attlist:a FROM tablelist:t
 		{:
 			SQLQuery sq = new SQLQuery(a,t);
+			sq.setOrderByList(a);
 			sq.setIsDistinct(true);
 			RESULT = sq;
 		:}
@@ -151,6 +152,7 @@ sqlquery ::= SELECT attlist:a FROM tablelist:t WHERE conditionlist:c
 		{:
 			ArrayList<Attribute> a = new ArrayList<>();
 			SQLQuery sq = new SQLQuery(a,t);
+			sq.setOrderByList(a);
 			sq.setIsDistinct(true);
 			RESULT = sq;
 		:}

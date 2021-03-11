@@ -16,10 +16,12 @@ public class Distinct extends Sort{
     ArrayList<Integer> sortOnIndexList;
     Schema schema;
     Operator base;
+    ArrayList<Attribute> sortOn;
 
     public Distinct(Operator base, boolean isAsc, boolean isDesc, ArrayList<Attribute> sortOn, int type, int numBuff) {
         super(base, isAsc, isDesc, sortOn, type, numBuff);
         this.base = base;
+        this.sortOn = sortOn;
     }
 
     @Override
@@ -30,9 +32,11 @@ public class Distinct extends Sort{
         lastTuple = null;
         this.schema = base.getSchema();
         this.sortOnIndexList = new ArrayList<>();
+        System.out.println("DISTINCT: Number of SORTON attributes:"+sortOn.size());
         for(Attribute a : sortOn) {
             if (schema == null) System.out.println("SCHEMA NULL");
             int index = schema.indexOf(a);
+            System.out.println("DISTINCT: Adding attribute with index:"+index);
             sortOnIndexList.add(index);
         }
         return super.open();
@@ -42,6 +46,7 @@ public class Distinct extends Sort{
         System.out.println("DISTINCT CALLED NEXT");
         int i;
         if (eos) {
+            System.out.println("DISTINCT: EOS REACHED....CLOSING");
             super.close();
             return null;
         }
@@ -57,7 +62,7 @@ public class Distinct extends Sort{
                 inbatch= super.next();
                 /** There is no more incoming pages from base operator **/
                 if (inbatch == null) {
-
+                    System.out.println("DISTINCT: NO MORE INCOMING");
                     eos = true;
                     return outbatch;
                 }
@@ -67,6 +72,7 @@ public class Distinct extends Sort{
              ** or the output buffer is full
              **/
             for (i = start; i < inbatch.size() && (!outbatch.isFull()); i++) {
+                System.out.println("DISTINCT: RETRIEVING NEXT TUPLE");
                 Tuple present = inbatch.get(i);
 
 
@@ -74,6 +80,7 @@ public class Distinct extends Sort{
                  ** this tuple is added to the output buffer
                  **/
                 if (lastTuple == null || Tuple.compareTuples(lastTuple, present, sortOnIndexList, sortOnIndexList) != 0) {
+                    System.out.println("DISTINCT: FOUND NEW DISTINCT ELEMENT...ADDING..");
                     outbatch.add(present);
                     lastTuple = present;
                 }
@@ -88,6 +95,7 @@ public class Distinct extends Sort{
             else
                 start = i;
         }
+
         return outbatch;
     }
 }
