@@ -75,32 +75,17 @@ public class RandomInitialPlan {
     }
 
     public void createSortOp() {
+        // TODO: sub-task: aim to support multi attribute sort on a single table
+        // TODO: sub-task: support multi attribute sort on 2 or more tables
         Sort op1 = null;
 
-        HashMap<String, ArrayList<Attribute>> hm = new HashMap<>();
-        for(Attribute a : orderbylist) {
-            String name = a.getTabName();
-            ArrayList<Attribute> al;
-            if (hm.containsKey(name)) {
-                al = hm.get(name);
-            } else {
-                al = new ArrayList<>();
-            }
-            al.add(a);
-            hm.put(name, al);
-        }
-
-        for (HashMap.Entry<String, Operator> entry : tab_op_hash.entrySet()) {
-            String tabname = entry.getKey();
-            if (hm.containsKey(tabname)) {
-                ArrayList<Attribute> al = hm.get(tabname);
-                Operator tempop = entry.getValue();
-                op1 = new Sort(tempop, sqlquery.isAsc(), sqlquery.isDesc(), al, OpType.SORT, 7);
-                /** set the schema same as base relation **/
-                op1.setSchema(tempop.getSchema());
-                tab_op_hash.put(tabname, op1);
-            }
-        }
+        String tabname = orderbylist.get(0).getTabName();
+        Operator tempop = (Operator) tab_op_hash.get(tabname);
+        // TODO previously had error trying to get numBuff to pass in, often 0 buffers
+        op1 = new Sort(tempop, sqlquery.isAsc(), sqlquery.isDesc(), orderbylist, OpType.SORT, 7);
+        /** set the schema same as base relation **/
+        op1.setSchema(tempop.getSchema());
+        modifyHashtable(tempop, op1);
 
         /** The last selection is the root of the plan tre
          ** constructed thus far
