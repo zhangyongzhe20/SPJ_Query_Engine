@@ -411,7 +411,9 @@ public class RandomOptimizer {
             ArrayList attrlist = ((Project) node).getProjAttr();
             node.setSchema(base.getSchema().subSchema(attrlist));
         } else if (node.getOpType() == OpType.SORT) {
-            // TODO?
+            Operator base = ((Sort) node).getBase();
+            modifySchema(base);
+            node.setSchema(base.getSchema());
         }
     }
 }
