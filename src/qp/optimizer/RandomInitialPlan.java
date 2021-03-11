@@ -36,7 +36,6 @@ public class RandomInitialPlan {
         groupbylist = sqlquery.getGroupByList();
         numJoin = joinlist.size();
         orderbylist = sqlquery.getOrderByList();
-        System.out.println("RIP: ORDER BY LIST SIZE:"+orderbylist.size());
     }
 
     /**
