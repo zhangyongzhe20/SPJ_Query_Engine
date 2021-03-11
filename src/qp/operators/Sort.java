@@ -38,6 +38,8 @@ public class Sort extends Operator {
         return base;
     }
 
+    public int getNumBuff() {return numBuff;}
+
     public void setBase(Operator base) {
         this.base = base;
     }

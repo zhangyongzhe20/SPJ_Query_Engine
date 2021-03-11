@@ -84,10 +84,13 @@ public class PlanCost {
         return 0;
     }
 
+    // sorting does not change output number of tuples
+    // updates IO cost instance var
     protected long getStatistics(Sort node) {
-        // TODO: use stats file for given table to calculate cost
-        System.out.println("Please implement plan cost for sort in PlanCost.java:89");
-        return 0;
+        long tuples =  calculateCost(node.getBase());
+        double c = 2 * tuples * (1 + Math.ceil(Math.log(Math.ceil((double)(tuples / node.getNumBuff()))) / Math.log(node.getNumBuff() - 1)));
+        cost = cost + (long) c;
+        return tuples; // no change
     }
 
     /**
@@ -162,7 +165,7 @@ public class PlanCost {
                 double sortLeftCost = 2 * leftpages * (1 + Math.ceil(Math.log(Math.ceil((double)(leftpages / numbuff))) / Math.log(numbuff - 1)));
                 double sortRightCost = 2 * rightpages * (1 + Math.ceil(Math.log(Math.ceil((double)(rightpages / numbuff))) / Math.log(numbuff - 1)));
                 // cost of merge join
-                double mergeLeftRight = leftpages + rightpages;
+                double mergeLeftRight = leftpages + rightpages; // TODO consider <=, >=, != ??
                 // total cost
                 joincost = (long) (sortLeftCost + sortRightCost + mergeLeftRight);
                 break;
