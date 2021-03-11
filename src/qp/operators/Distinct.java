@@ -68,8 +68,6 @@ public class Distinct extends Sort{
              **/
             for (i = start; i < inbatch.size() && (!outbatch.isFull()); i++) {
                 Tuple present = inbatch.get(i);
-//                System.out.println("tuple: " + present.dataAt(0) + " " + present.dataAt(1)
-//                        + " " + present.dataAt(2) + " " + present.dataAt(3));
 
 
                 /** If the condition is satisfied then
