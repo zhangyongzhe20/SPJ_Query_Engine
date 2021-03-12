@@ -69,8 +69,8 @@ public class SortMergeJoin extends Join {
         //todo add sortedfile
         leftAttrs.add(leftAttr);
         rightAttrs.add(rightAttr);
-        leftSort = new Sort(left, true, false, leftAttrs, OpType.SORT, numBuff);
-        rightSort = new Sort(right, true, false, rightAttrs, OpType.SORT, numBuff);
+        leftSort = new Sort(left, true, false, leftAttrs, OpType.SORT, 3);
+        rightSort = new Sort(right, true, false, rightAttrs, OpType.SORT, 3);
 
 //        List<Order> leftSortOrders = Arrays.asList(new Order(getCondition().getLhs(), Order.OrderType.ASC));
 //        List<Order> rightSortOrders = Arrays.asList(new Order((Attribute) getCondition().getRhs(), Order.OrderType.ASC));
