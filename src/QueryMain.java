@@ -13,6 +13,8 @@ import qp.parser.parser;
 import qp.utils.*;
 
 import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class QueryMain {
 
@@ -128,6 +130,7 @@ public class QueryMain {
 
         root = RandomOptimizer.makeExecPlan(planroot);
 
+
         return root;
     }
 
@@ -173,14 +176,18 @@ public class QueryMain {
         /** Print the schema of the result **/
         Schema schema = root.getSchema();
         numAtts = schema.getNumCols();
+        System.out.println("# of attributes: " + numAtts);
         printSchema(schema);
 
+        if(root.next() == null){
+            System.out.println("no data");
+        }
         /** Print each tuple in the result **/
         Batch resultbatch;
         while ((resultbatch = root.next()) != null) {
             for (int i = 0; i < resultbatch.size(); ++i) {
                 printTuple(resultbatch.get(i));
-                System.out.println(resultbatch.get(i));
+//                System.out.println(resultbatch.get(i));
             }
         }
         root.close();
@@ -211,13 +218,13 @@ public class QueryMain {
     protected static void printTuple(Tuple t) {
         for (int i = 0; i < numAtts; ++i) {
             Object data = t.dataAt(i);
+            System.out.println("data is: " + data);
+            System.out.println("data type is : " + data.getClass().getName());
             if (data instanceof Integer) {
                 out.print(((Integer) data).intValue() + "\t");
             } else if (data instanceof Float) {
                 out.print(((Float) data).floatValue() + "\t");
-            } else if (data == null) {
-                out.print("-NULL-\t");
-            } else {
+            }  else {
                 out.print(((String) data) + "\t");
             }
         }

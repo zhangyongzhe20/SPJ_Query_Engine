@@ -17,6 +17,7 @@ public class Join extends Operator {
     int numBuff;                         // Number of buffers available
     int jointype;                        // JoinType.NestedJoin/SortMerge/HashJoin
     int nodeIndex;                       // Each join node is given a number
+    Condition con;     //join condition
 
     public Join(Operator left, Operator right, int type) {
         super(type);
@@ -31,6 +32,7 @@ public class Join extends Operator {
         this.right = right;
         conditionList = new ArrayList<>();
         conditionList.add(condition);
+        this.con = condition;
     }
 
     public Join(Operator left, Operator right, ArrayList<Condition> conditionList, int type) {
@@ -105,11 +107,14 @@ public class Join extends Operator {
     public Object clone() {
         Operator newleft = (Operator) left.clone();
         Operator newright = (Operator) right.clone();
-        ArrayList<Condition> newcondlist = new ArrayList<>();
-        for (Condition cond : conditionList) {
-            newcondlist.add((Condition) cond.clone());
-        }
-        Join jn = new Join(newleft, newright, newcondlist, optype);
+//        ArrayList<Condition> newcondlist = new ArrayList<>();
+//        for (Condition cond : conditionList) {
+//            newcondlist.add((Condition) cond.clone());
+//        }
+//        Join jn = new Join(newleft, newright, newcondlist, optype);
+        Condition newcond = (Condition) con.clone();
+
+        Join jn = new Join(newleft, newright, newcond, optype);
         Schema newsche = newleft.getSchema().joinWith(newright.getSchema());
         jn.setSchema(newsche);
         jn.setJoinType(jointype);
