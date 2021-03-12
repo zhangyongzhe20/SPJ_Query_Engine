@@ -17,8 +17,8 @@ public class SortMergeJoin extends Join {
 
     private static boolean CLEANUP_FILES = true;
 
-    private ExternalSort leftSort;
-    private ExternalSort rightSort;
+    private Sort leftSort;
+    private Sort rightSort;
 
     private int leftJoinAttrIdx;
     private int rightJoinAttrIdx;
@@ -69,14 +69,13 @@ public class SortMergeJoin extends Join {
         //todo add sortedfile
         leftAttrs.add(leftAttr);
         rightAttrs.add(rightAttr);
-        ArrayList<Attribute> orderbylist;
-//        leftSort = new Sort(left, true, false, leftAttrs, OpType.SORT, numBuff);
-//        rightSort = new Sort(right, true, false, rightAttrs, OpType.SORT, numBuff);
+        leftSort = new Sort(left, true, false, leftAttrs, OpType.SORT, numBuff);
+        rightSort = new Sort(right, true, false, rightAttrs, OpType.SORT, numBuff);
 
-        List<Order> leftSortOrders = Arrays.asList(new Order(getCondition().getLhs(), Order.OrderType.ASC));
-        List<Order> rightSortOrders = Arrays.asList(new Order((Attribute) getCondition().getRhs(), Order.OrderType.ASC));
-        leftSort = new ExternalSort(left, leftSortOrders, numBuff);
-        rightSort = new ExternalSort(right, rightSortOrders, numBuff);
+//        List<Order> leftSortOrders = Arrays.asList(new Order(getCondition().getLhs(), Order.OrderType.ASC));
+//        List<Order> rightSortOrders = Arrays.asList(new Order((Attribute) getCondition().getRhs(), Order.OrderType.ASC));
+//        leftSort = new ExternalSort(left, leftSortOrders, numBuff);
+//        rightSort = new ExternalSort(right, rightSortOrders, numBuff);
 
         if (!(leftSort.open() && rightSort.open())) {
             //System.err.println("sort can not open");
