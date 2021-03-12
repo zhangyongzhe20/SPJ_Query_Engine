@@ -64,13 +64,15 @@ public class RandomOptimizer {
                     return bnj;
                 case JoinType.SORTMERGE:
                     SortMergeJoin smj = new SortMergeJoin((Join) node);
-                    ArrayList<Attribute> leftAttrs = new ArrayList<>();
-                    leftAttrs.add(smj.getCondition().getLhs());
-                    smj.setLeft(new Sort(left, false, false, leftAttrs, OpType.SORT, BufferManager.getBuffersPerJoin()));
-                    ArrayList<Attribute> rightAttrs = new ArrayList<>();
-                    rightAttrs.add((Attribute) smj.getCondition().getRhs());
-                    smj.setRight(new Sort(right, false, false, rightAttrs, OpType.SORT, BufferManager.getBuffersPerJoin())); // TODO smj.setRight(new Sort(right, rightAttrs, numbuff));
+                    //ArrayList<Attribute> leftAttrs = new ArrayList<>();
+                    //leftAttrs.add(smj.getCondition().getLhs());
+                    //smj.setLeft(new Sort(left, false, false, leftAttrs, OpType.SORT, BufferManager.getBuffersPerJoin()));
+                    //ArrayList<Attribute> rightAttrs = new ArrayList<>();
+                    //rightAttrs.add((Attribute) smj.getCondition().getRhs());
+                    //smj.setRight(new Sort(right, false, false, rightAttrs, OpType.SORT, BufferManager.getBuffersPerJoin())); // TODO smj.setRight(new Sort(right, rightAttrs, numbuff));
 
+                    smj.setLeft(left);
+                    smj.setRight(right);
                     smj.setNumBuff(numbuff);
                     return smj;
 

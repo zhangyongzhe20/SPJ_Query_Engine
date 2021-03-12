@@ -1,7 +1,7 @@
 package qp.operators;
+
 import qp.utils.Attribute;
 import qp.utils.Batch;
-import qp.utils.Condition;
 import qp.utils.Tuple;
 
 import java.io.*;
@@ -10,186 +10,289 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
-public class SortMergeJoin extends Join{
-    private Batch leftBatch;
-    private Batch rightBatch;
-    // index of left buffer
-    private int leftBatchIndex = 0;
-    // index of right buffer
-    private int rightBatchIndex = 0;
-    private Tuple leftTuple = null;
-    private Tuple rightTuple = null;
-    // the index of join attribute of left tuple
-    private int leftTupleIndex = 0;
-    // the index of join attribute of right tuple
-    private int rightTupleIndex = 0;
-    // the data type of the join attribute
-    private int joinAttrType;
-    // marker, used to backtrack when left batch has duplicate join values
-    private int markerIndex = -1;
-    // end of left stream
-    private boolean eosLeft = false;
-    // end of right stream
-    private boolean eosRight = false;
-    // others
+/**
+ * Created by michaellimantara on 21/3/17.
+ */
+public class SortMergeJoin extends Join {
+
+    private static boolean CLEANUP_FILES = true;
+
+    private ExternalSort leftSort;
+    private ExternalSort rightSort;
+
+    private int leftJoinAttrIdx;
+    private int rightJoinAttrIdx;
+
     private int batchSize;
 
+    private List<File> leftFiles;
+    private List<File> rightFiles;
 
-    /**
-     * Constructor of sort-merge join based on block nest loop join
-     * @param basejn
-     */
-    public SortMergeJoin(Join basejn) {
-        super(basejn.getLeft(), basejn.getRight(), basejn.getCondition(), basejn.getOpType());
-        schema = basejn.getSchema();
-        jointype = basejn.getJoinType();
-        numBuff = basejn.getNumBuff();
+    private int leftBufferIdx = -1;
+    private Batch leftBuffer;
+
+    private int rightBufferOffset = 0;
+    private List<Batch> rightBuffer = new LinkedList<>();
+
+    private Batch rightRunningBuffer;
+    private int rightRunningBufferIdx = -1;
+
+    private int rightBufferSize;
+
+    private int leftTupleIdx;
+    private int rightTupleIdx;
+    private int rightFirstMatchIdx;
+    private boolean hasMatch;
+    //left attributes
+    ArrayList<Attribute> leftAttrs = new ArrayList<>();
+    ArrayList<Attribute> rightAttrs = new ArrayList<>();
+
+    public SortMergeJoin(Join join) {
+        super(join.getLeft(), join.getRight(), join.getCondition(), join.getOpType());
+        schema = join.getSchema();
+        jointype = join.getJoinType();
+        numBuff = join.getNumBuff();
     }
 
-    /**
-     *
-     * @return true if the operator open successfully
-     */
-
-    public boolean open(){
-        if(!left.open() || !right.open()){
-//            System.out.println("can not open left and right");
-            return false;
-        }
-
+    @Override
+    public boolean open() {
         //calculate the batch size
         batchSize = Batch.getPageSize() / schema.getTupleSize();
         // get the leftIndex and rightIndex; TODO: only implemented one condition
-        leftTupleIndex = left.getSchema().indexOf(getCondition().getLhs());
-        rightTupleIndex = right.getSchema().indexOf((Attribute) getCondition().getRhs());
+        Attribute leftAttr = getCondition().getLhs();
+        Attribute rightAttr = (Attribute) getCondition().getRhs();
+        leftJoinAttrIdx = left.getSchema().indexOf(leftAttr);
+        rightJoinAttrIdx = right.getSchema().indexOf(rightAttr);
         // get the join attribute; TODO: only implemented one condition
-        joinAttrType = left.getSchema().typeOf(conditionList.get(0).getLhs());
-        return true;
-    }
+        // joinAttrType = left.getSchema().typeOf(conditionList.get(0).getLhs());
 
-    public Batch next(){
-        Batch output = new Batch(batchSize);
-        //initial left and right tuple with index = 0
-        leftTuple = readNextLeftTuple();
-        rightTuple = readNextRightTuple();
-        while(!output.isFull() && !eosLeft && !eosRight){
-            int comparsion = compareLeftRightTuple(leftTuple, rightTuple, leftTupleIndex, rightTupleIndex);
-            // no marker at the beginning
-            if(markerIndex == -1) {
-                while (comparsion < 0) {
-                    leftTuple = readNextLeftTuple();
-                    comparsion = compareLeftRightTuple(leftTuple, rightTuple, leftTupleIndex, rightTupleIndex);
-                }
-                while (comparsion > 0) {
-                    rightTuple = readNextRightTuple();
-                    comparsion = compareLeftRightTuple(leftTuple, rightTuple, leftTupleIndex, rightTupleIndex);
-                }
-                // need to reverse one
-                markerIndex = rightBatchIndex - 1;
-            }
-            if(comparsion == 0){
-             //join left and right, then insert to output
-             output.add(leftTuple.joinWith(rightTuple));
-             rightTuple = readNextRightTuple();
-            }else{
-                rightBatchIndex = markerIndex;
-                leftTuple = readNextLeftTuple();
-                markerIndex = -1;
-            }
+        //todo add sortedfile
+        leftAttrs.add(leftAttr);
+        rightAttrs.add(rightAttr);
+        ArrayList<Attribute> orderbylist;
+//        leftSort = new Sort(left, true, false, leftAttrs, OpType.SORT, numBuff);
+//        rightSort = new Sort(right, true, false, rightAttrs, OpType.SORT, numBuff);
+
+        List<Order> leftSortOrders = Arrays.asList(new Order(getCondition().getLhs(), Order.OrderType.ASC));
+        List<Order> rightSortOrders = Arrays.asList(new Order((Attribute) getCondition().getRhs(), Order.OrderType.ASC));
+        leftSort = new ExternalSort(left, leftSortOrders, numBuff);
+        rightSort = new ExternalSort(right, rightSortOrders, numBuff);
+
+        if (!(leftSort.open() && rightSort.open())) {
+            //System.err.println("sort can not open");
+            return false;
         }
-        return output;
+        try {
+            leftFiles = writeOperatorToFile(leftSort, "SMJ-Left");
+            rightFiles = writeOperatorToFile(rightSort, "SMJ-Right");
+
+        leftSort.close();
+        rightSort.close();
+
+        rightBufferSize = getNumBuff() - 3;  // reserve 1 output buf, 1 for left input, 1 for "running" right input
+
+        initializeRightBuffer();
+        return true;
+    }catch (IOException | ClassNotFoundException e) {
+            e.printStackTrace();
+            return false;
+        }
+        }
+
+    @Override
+    public Batch next() {
+        try {
+            return nextThrows();
+        } catch (IOException | ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
-     *
-     * @return true if operator closed sucessfully
+     * Produces 1 batch of output
      */
+    private Batch nextThrows() throws IOException, ClassNotFoundException {
+        Batch joinResult = new Batch(batchSize);
+
+        while (true) {
+            if (joinResult.isFull() || hasExhaustedLeftTuples() || hasExhaustedRightTuples()) {
+                break;
+            }
+            Tuple leftTuple = readLeftTupleAtIndex(leftTupleIdx);
+            Tuple rightTuple = readRightTupleAtIndex(rightTupleIdx);
+            int comparison = Tuple.compareTuples(leftTuple, rightTuple, leftJoinAttrIdx, rightJoinAttrIdx);
+            if (comparison < 0) {           // if left tuple < right tuple on join attribute,
+                leftTupleIdx++;      // we move to the next left tuple
+                if (hasMatch) {
+                    rightTupleIdx = rightFirstMatchIdx;
+                }
+                hasMatch = false;
+            } else if (comparison > 0) {    // if left tuple > right tuple on join attribute,
+                rightTupleIdx++;     // we move to the next right tuple
+                hasMatch = false;
+            } else {  // if left tuple = right tuple on join attribute, we start joining the tuples
+                if (!hasMatch) {
+                    rightFirstMatchIdx = rightTupleIdx;
+                    hasMatch = true;
+                }
+                Tuple joinTuple = leftTuple.joinWith(rightTuple);
+                joinResult.add(joinTuple);
+                rightTupleIdx++;
+            }
+        }
+        return joinResult.isEmpty() ? null : joinResult;  // return null to signify end of result
+    }
+
+    private Tuple readLeftTupleAtIndex(int idx) throws IOException, ClassNotFoundException, IndexOutOfBoundsException {
+        int tupleSize = getLeft().getSchema().getTupleSize();
+        int batchSize = Batch.getPageSize() / tupleSize;
+
+        int batchIndex = idx / batchSize;
+        int tupleIdxInBatch = idx % batchSize;
+
+        Batch batch = readLeftBatch(batchIndex);
+        return batch.get(tupleIdxInBatch);
+    }
+
+    private Tuple readRightTupleAtIndex(int idx) throws IOException, ClassNotFoundException {
+        int tupleSize = getRight().getSchema().getTupleSize();
+        int batchSize = Batch.getPageSize() / tupleSize;
+
+        int batchIndex = idx / batchSize;
+        int tupleIdxInBatch = idx % batchSize;
+
+        Batch batch = readRightBatch(batchIndex);
+        return batch.get(tupleIdxInBatch);
+    }
+
+    private boolean hasExhaustedLeftTuples() {
+        try {
+            readLeftTupleAtIndex(leftTupleIdx);
+            return false;
+        } catch (IndexOutOfBoundsException e) {
+            return true;
+        } catch (IOException | ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private boolean hasExhaustedRightTuples() {
+        try {
+            readRightTupleAtIndex(rightTupleIdx);
+            return false;
+        } catch (IndexOutOfBoundsException e) {
+            return true;
+        } catch (IOException | ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     @Override
-    public boolean close(){
-        left.close();
-        right.close();
+    public boolean close() {
+        if(rightBuffer!=null) {
+            rightBuffer.clear();
+        }
+        if(leftBuffer!=null) {
+            leftBuffer.clear();
+        }
+
+        if (CLEANUP_FILES) {
+            for (File file: leftFiles) {
+                file.delete();
+            }
+
+            for (File file: rightFiles) {
+                file.delete();
+            }
+        }
+
         return super.close();
     }
 
+    private void initializeRightBuffer() throws IOException, ClassNotFoundException {
+        rightBufferOffset = 0;
+        rightBuffer.clear();
+        for (int i = 0; i < rightBufferSize; i++) {
+            if (i >= rightFiles.size()) {
+                break;
+            }
 
-
-    /**
-     * read next left tuple from left batch
-     * @return next left tuple
-     */
-    private Tuple readNextLeftTuple() {
-        if(leftBatch == null || left.next() == null){
-            eosLeft = true;
-            return null;
-        }
-        // if current left batch index reach the end, fetch new batch
-        if(leftBatchIndex == leftBatch.size()){
-            leftBatch = left.next();
-            leftBatchIndex = 0;
-        }
-
-        return leftBatch.get(leftBatchIndex++);
-    }
-
-    /**
-     * read next right tuple from right batch
-     * @return next right tuple
-     */
-    private Tuple readNextRightTuple() {
-        if(rightBatch == null || right.next() == null){
-            eosRight = true;
-            return null;
-        }
-        // if current right batch index reach the end, fetch new batch
-        if(rightBatchIndex == rightBatch.size()){
-            rightBatch = right.next();
-            rightBatchIndex = 0;
-        }
-
-        return rightBatch.get(rightBatchIndex++);
-    }
-
-    /**
-     * compare the join attribute of left and right tuple
-     * @param left
-     * @param right
-     * @param leftIndex
-     * @param rightIndex
-     * @return
-     */
-    private int compareLeftRightTuple(Tuple left, Tuple right, int leftIndex, int rightIndex){
-        Object leftValue = left.dataAt(leftIndex);
-        Object rightValue = right.dataAt(rightIndex);
-
-        switch (joinAttrType) {
-            case Attribute.INT:
-                return Integer.compare((int) leftValue, (int) rightValue);
-            case Attribute.STRING:
-                return ((String) leftValue).compareTo((String) rightValue);
-            case Attribute.REAL:
-                return Float.compare((float) leftValue, (float) rightValue);
-            //TODO: if needed, can add more attributes here such as TIME
-            default:
-                return 0;
+            Batch batch = readBatchFromFile(rightFiles.get(i));
+            rightBuffer.add(batch);
         }
     }
 
+    private Batch readLeftBatch(int idx) throws IOException, ClassNotFoundException, IndexOutOfBoundsException {
+        if (idx == leftBufferIdx) {
+            return leftBuffer;
+        }
+        File file = leftFiles.get(idx);
+        leftBuffer = readBatchFromFile(file);
+        leftBufferIdx = idx;
+        return leftBuffer;
+    }
 
-//    public static void main(String[] args) {
-//        //node is the query plan
-//        Operator node = null;
-//        int numOfBuff = 3;
-//        SortMergeJoin smj = new SortMergeJoin((Join) node);
-//
-//        //external merge sort for left batch
-//        //List<Attribute> leftAttrs = new ArrayList<>();
-//        //leftAttrs.add(smj.getCondition().getLhs());
-//        //smj.setLeft(new externalMergeSort(left, leftAttrs, numOfBuff));
-//        //external merge sort for right batch
-//        //List<Attribute> rightAttrs = new ArrayList<>();
-//        //rightAttrs.add((Attribute) smj.getCondition().getRhs());
-//        //smj.setRight(new externalMergeSort(right, rightAttrs, numOfBuff));
-//
-//        smj.setNumBuff(numOfBuff);
-//    }
+    private Batch readRightBatch(int idx) throws IOException, ClassNotFoundException {
+        if (isInRightBuffer(idx)) {
+            return readFromBuffer(idx);
+        }
+        if (idx < rightBufferOffset || rightBufferSize == 0) {
+            return readToRunningBuffer(idx);
+        }
+        while (!isInRightBuffer(idx)) {  // must be beyond the current buffer scope
+            advanceBuffer();             // hence we advance the buffer
+        }
+        return readFromBuffer(idx);
+    }
+
+    private void advanceBuffer() throws IOException, ClassNotFoundException {
+        int nextRightBatchToRead = rightBufferOffset + rightBufferSize;
+        rightBuffer.remove(0);
+        Batch batch = readBatchFromFile(rightFiles.get(nextRightBatchToRead));
+        rightBuffer.add(batch);
+        rightBufferOffset++;
+    }
+
+    private Batch readToRunningBuffer(int idx) throws IOException, ClassNotFoundException {
+        if (rightRunningBufferIdx == idx) {
+            return rightRunningBuffer;
+        }
+        rightRunningBuffer = readBatchFromFile(rightFiles.get(idx));
+        rightRunningBufferIdx = idx;
+        return rightRunningBuffer;
+    }
+
+    private Batch readFromBuffer(int idx) {
+        return rightBuffer.get(idx - rightBufferOffset);
+    }
+
+    private boolean isInRightBuffer(int idx) {
+        return (rightBufferOffset <= idx) && (idx < rightBufferOffset + rightBufferSize);
+    }
+
+    private List<File> writeOperatorToFile(Operator operator, String prefix) throws IOException {
+        Batch batch;
+        int count = 0;
+        List<File> files = new ArrayList<>();
+        while ((batch = operator.next()) != null) {
+            File file = new File(prefix + "-" + count);
+            count += 1;
+            writeBatchToFile(batch, file);
+            files.add(file);
+        }
+        return files;
+    }
+
+    private void writeBatchToFile(Batch batch, File file) throws IOException {
+        ObjectOutputStream objectOutputStream = new ObjectOutputStream(new FileOutputStream(file));
+        objectOutputStream.writeObject(batch);
+
+    }
+
+    private Batch readBatchFromFile(File file) throws IOException, ClassNotFoundException {
+        ObjectInputStream objectInputStream = new ObjectInputStream(new FileInputStream(file));
+        return (Batch) objectInputStream.readObject();
+    }
+
+
 }
