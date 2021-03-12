@@ -107,6 +107,7 @@ public class ExternalSort extends Operator {
 
     private void generateSortedRuns() {
         initialNumTuples = 0;
+        int counter = 0;
         Batch currentBatch = source.next();  // read first batch
         while (currentBatch != null) {
             ArrayList<Batch> run = new ArrayList<>();
@@ -125,7 +126,9 @@ public class ExternalSort extends Operator {
             List<Batch> sortedRun = sortedRun(run);
             File sortedRunFile = writeRun(sortedRun);
             sortedRunFiles.add(sortedRunFile);
+            counter ++;
         }
+        System.out.println("GenerateSortedRuns wrote: " + counter + " tuples");
     }
 
     private void executeMerge() {
