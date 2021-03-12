@@ -185,6 +185,7 @@ public class QueryMain {
         /** Print each tuple in the result **/
         Batch resultbatch;
         while ((resultbatch = root.next()) != null) {
+            System.out.println("Writing out batch...");
             for (int i = 0; i < resultbatch.size(); ++i) {
                 printTuple(resultbatch.get(i));
 //                System.out.println(resultbatch.get(i));
@@ -218,8 +219,7 @@ public class QueryMain {
     protected static void printTuple(Tuple t) {
         for (int i = 0; i < numAtts; ++i) {
             Object data = t.dataAt(i);
-            System.out.println("data is: " + data);
-            System.out.println("data type is : " + data.getClass().getName());
+
             if (data instanceof Integer) {
                 out.print(((Integer) data).intValue() + "\t");
             } else if (data instanceof Float) {
