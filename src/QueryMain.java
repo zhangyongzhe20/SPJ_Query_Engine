@@ -179,9 +179,6 @@ public class QueryMain {
         System.out.println("# of attributes: " + numAtts);
         printSchema(schema);
 
-        if(root.next() == null){
-            System.out.println("no data");
-        }
         /** Print each tuple in the result **/
         Batch resultbatch;
         while ((resultbatch = root.next()) != null) {
