@@ -94,6 +94,7 @@ public class SortMergeJoin extends Join {
         rightSort.close();
 
         try {
+            rightBufferSize = getNumBuff() - 3;
             initializeRightBuffer();
         } catch (Exception e) {
             System.out.println("Pokemon gotta catch 'em all");
