@@ -50,10 +50,7 @@ public class RandomInitialPlan {
      **/
     public Operator prepareInitialPlan() {
 
-        if (sqlquery.getGroupByList().size() > 0) {
-            System.err.println("GroupBy is not implemented.");
-            System.exit(1);
-        }
+
 
         tab_op_hash = new HashMap<>();
         createScanOp();
@@ -61,7 +58,11 @@ public class RandomInitialPlan {
         if (numJoin != 0) {
             createJoinOp();
         }
-        createGroupbyOperator();
+        if (sqlquery.getGroupByList().size() > 0) {
+            System.out.println("Creating groupby op");
+            createGroupbyOperator();
+        }
+
         if (sqlquery.getOrderByList().size() > 0) {
             createSortOp();
         }

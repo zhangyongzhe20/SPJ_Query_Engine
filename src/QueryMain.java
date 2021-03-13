@@ -29,6 +29,10 @@ public class QueryMain {
         Batch.setPageSize(getPageSize(args, in));
 
         SQLQuery sqlquery = getSQLQuery(args[0]);
+        if (sqlquery == null) {
+            System.out.println("sqlquery null");
+            System.exit(1);
+        }
         System.out.println("isDesc: " + sqlquery.isDesc());
         System.out.println("isAsc: " + sqlquery.isAsc());
         configureBufferManager(sqlquery.getNumJoin(), args, in);
