@@ -6,12 +6,9 @@ import qp.utils.Tuple;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
-
-/**
- * Created by michaellimantara on 21/3/17.
- */
 public class SortMergeJoin extends Join {
 
     private static boolean CLEANUP_FILES = true;
@@ -52,6 +49,7 @@ public class SortMergeJoin extends Join {
 
     @Override
     public boolean open() {
+
         //calculate the batch size
         batchSize = Batch.getPageSize() / schema.getTupleSize();
 
@@ -60,31 +58,20 @@ public class SortMergeJoin extends Join {
         Attribute rightAttr = (Attribute) getCondition().getRhs();
         leftJoinAttrIdx = left.getSchema().indexOf(leftAttr);
         rightJoinAttrIdx = right.getSchema().indexOf(rightAttr);
+        System.err.println(leftJoinAttrIdx + ": " + rightJoinAttrIdx);
         System.out.println("-----");
-        Debug.PPrint(left.getSchema());
-        Debug.PPrint(right.getSchema());
-        Debug.PPrint(schema);
         System.out.println("-----");
 
-        // get the join attribute; TODO: only implemented one condition
         // joinAttrType = left.getSchema().typeOf(conditionList.get(0).getLhs());
 
         //todo add sortedfile
+        System.out.println("-----");
+        System.err.println(leftAttr.getTabName() + "." + leftAttr.getColName() + ": " + rightAttr.getTabName() + "." + rightAttr.getColName());
+        System.out.println("-----");
         leftAttrs.add(leftAttr);
         rightAttrs.add(rightAttr);
         Sort leftSort = new Sort(left, true, false, leftAttrs, OpType.SORT, 3);
-        if(!leftSort.open()) {
-            System.err.println("sort could not open left");
-            return false;
-        }
-        try {
-            leftFiles = writeOperatorToFile(leftSort, "left");
-        } catch (IOException e){
-            e.printStackTrace();
-            return false;
-        }
-
-        Sort rightSort = new Sort(right, true, false, rightAttrs, OpType.SORT, 3);
+        Sort rightSort = new Sort(right, true, false, rightAttrs, OpType.SORT, 10);
         if(!rightSort.open()) {
             System.err.println("sort could not open right");
             return false;
@@ -95,7 +82,17 @@ public class SortMergeJoin extends Join {
             e.printStackTrace();
             return false;
         }
+        if(!leftSort.open()) {
+            System.err.println("sort could not open left");
+            return false;
+        }
 
+        try {
+            leftFiles = writeOperatorToFile(leftSort, "left");
+        } catch (IOException e){
+            e.printStackTrace();
+            return false;
+        }
         leftSort.close();
         rightSort.close();
 
@@ -120,7 +117,7 @@ public class SortMergeJoin extends Join {
             if(b == null) {
                 return null;
             }
-            Debug.PPrint(b);
+//            Debug.PPrint(b);
             return b;
         } catch (IOException | ClassNotFoundException e) {
             throw new RuntimeException(e);
@@ -134,8 +131,10 @@ public class SortMergeJoin extends Join {
         Batch joinResult = new Batch(batchSize);
 
         while (true) {
-            if (joinResult.isFull() || hasExhaustedLeftTuples() || hasExhaustedRightTuples()) {
-                break;
+           if (joinResult.isFull() || hasExhaustedLeftTuples() || hasExhaustedRightTuples()) {
+               // if (hasExhaustedLeftTuples() || hasExhaustedRightTuples()) {
+
+                    break;
             }
             Tuple leftTuple = readLeftTupleAtIndex(leftTupleIdx);
             Tuple rightTuple = readRightTupleAtIndex(rightTupleIdx);
@@ -299,6 +298,8 @@ public class SortMergeJoin extends Join {
             writeBatchToFile(batch, file);
             files.add(file);
         }
+//        File file = new File(prefix + "-" + count);
+//        files.add(file);
         return files;
     }
 
