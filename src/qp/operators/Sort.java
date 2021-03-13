@@ -42,6 +42,9 @@ public class Sort extends Operator {
         this.base = base;
     }
 
+    // The earliest this can be called if after open()
+    public String getCompleteFile() {return completeFile;}
+
     /**
      * Open file prepare a stream pointer to read input file
      */
