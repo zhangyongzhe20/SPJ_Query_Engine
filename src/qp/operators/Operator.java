@@ -44,6 +44,7 @@ public class Operator {
     }
 
     public Object clone() {
+        System.out.println("CLONING");
         return new Operator(optype);
     }
 

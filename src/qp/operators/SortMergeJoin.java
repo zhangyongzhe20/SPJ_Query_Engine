@@ -60,6 +60,12 @@ public class SortMergeJoin extends Join {
         Attribute rightAttr = (Attribute) getCondition().getRhs();
         leftJoinAttrIdx = left.getSchema().indexOf(leftAttr);
         rightJoinAttrIdx = right.getSchema().indexOf(rightAttr);
+        System.out.println("-----");
+        Debug.PPrint(left.getSchema());
+        Debug.PPrint(right.getSchema());
+        Debug.PPrint(schema);
+        System.out.println("-----");
+
         // get the join attribute; TODO: only implemented one condition
         // joinAttrType = left.getSchema().typeOf(conditionList.get(0).getLhs());
 
@@ -114,6 +120,7 @@ public class SortMergeJoin extends Join {
             if(b == null) {
                 return null;
             }
+            Debug.PPrint(b);
             return b;
         } catch (IOException | ClassNotFoundException e) {
             throw new RuntimeException(e);

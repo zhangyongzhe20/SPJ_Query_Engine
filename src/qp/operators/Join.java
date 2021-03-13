@@ -107,14 +107,11 @@ public class Join extends Operator {
     public Object clone() {
         Operator newleft = (Operator) left.clone();
         Operator newright = (Operator) right.clone();
-//        ArrayList<Condition> newcondlist = new ArrayList<>();
-//        for (Condition cond : conditionList) {
-//            newcondlist.add((Condition) cond.clone());
-//        }
-//        Join jn = new Join(newleft, newright, newcondlist, optype);
-        Condition newcond = (Condition) con.clone();
-
-        Join jn = new Join(newleft, newright, newcond, optype);
+        ArrayList<Condition> newcondlist = new ArrayList<>();
+        for (Condition cond : conditionList) {
+            newcondlist.add((Condition) cond.clone());
+        }
+        Join jn = new Join(newleft, newright, newcondlist, optype);
         Schema newsche = newleft.getSchema().joinWith(newright.getSchema());
         jn.setSchema(newsche);
         jn.setJoinType(jointype);

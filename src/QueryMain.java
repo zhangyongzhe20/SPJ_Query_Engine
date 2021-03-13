@@ -177,15 +177,14 @@ public class QueryMain {
         Schema schema = root.getSchema();
         numAtts = schema.getNumCols();
         System.out.println("# of attributes: " + numAtts);
+        Debug.PPrint(schema);
         printSchema(schema);
 
         /** Print each tuple in the result **/
         Batch resultbatch;
         while ((resultbatch = root.next()) != null) {
-            System.out.println("Writing out batch...");
             for (int i = 0; i < resultbatch.size(); ++i) {
                 printTuple(resultbatch.get(i));
-//                System.out.println(resultbatch.get(i));
             }
         }
         root.close();
