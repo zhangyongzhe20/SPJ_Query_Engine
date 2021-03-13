@@ -3,7 +3,6 @@ package qp.operators;
 import qp.utils.Attribute;
 import qp.utils.Batch;
 import qp.utils.Tuple;
-import qp.utils.TupleWriter;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -16,9 +15,6 @@ import java.util.List;
 public class SortMergeJoin extends Join {
 
     private static boolean CLEANUP_FILES = true;
-
-    private Sort leftSort;
-    private Sort rightSort;
 
     private int leftJoinAttrIdx;
     private int rightJoinAttrIdx;
@@ -70,30 +66,32 @@ public class SortMergeJoin extends Join {
         //todo add sortedfile
         leftAttrs.add(leftAttr);
         rightAttrs.add(rightAttr);
-        leftSort = new Sort(left, true, false, leftAttrs, OpType.SORT, 3);
-        rightSort = new Sort(right, true, false, rightAttrs, OpType.SORT, 3);
-
+        Sort leftSort = new Sort(left, true, false, leftAttrs, OpType.SORT, 3);
         if(!leftSort.open()) {
             System.err.println("sort could not open left");
             return false;
         }
-
-        File l = new File(leftSort.getCompleteFile());
-        if(!l.renameTo(new File("left-" + leftSort.getCompleteFile()))) {
-            System.err.println("sort could not rename left");
+        try {
+            leftFiles = writeOperatorToFile(leftSort, "left");
+        } catch (IOException e){
+            e.printStackTrace();
             return false;
         }
 
+        Sort rightSort = new Sort(right, true, false, rightAttrs, OpType.SORT, 3);
         if(!rightSort.open()) {
             System.err.println("sort could not open right");
             return false;
         }
-
-        File r = new File(rightSort.getCompleteFile());
-        if(!r.renameTo(new File("right-" + rightSort.getCompleteFile()))) {
-            System.err.println("sort could not rename right");
+        try {
+            rightFiles = writeOperatorToFile(rightSort, "right");
+        } catch (IOException e){
+            e.printStackTrace();
             return false;
         }
+
+        leftSort.close();
+        rightSort.close();
 
         // materialized sorted files
         return true;
@@ -101,9 +99,13 @@ public class SortMergeJoin extends Join {
 
     @Override
     public Batch next() {
-        System.out.println("CALLED SMJ NEXT()");
+        // TODO: what if partition too large to fit into memory?
         try {
-            return nextThrows();
+            Batch b = nextThrows();
+            if(b == null) {
+                return null;
+            }
+            return b;
         } catch (IOException | ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
@@ -190,25 +192,24 @@ public class SortMergeJoin extends Join {
 
     @Override
     public boolean close() {
-        return true;
-//        if(rightBuffer!=null) {
-//            rightBuffer.clear();
-//        }
-//        if(leftBuffer!=null) {
-//            leftBuffer.clear();
-//        }
-//
-//        if (CLEANUP_FILES) {
-//            for (File file: leftFiles) {
-//                file.delete();
-//            }
-//
-//            for (File file: rightFiles) {
-//                file.delete();
-//            }
-//        }
-//
-//        return super.close();
+        if(rightBuffer!=null) {
+            rightBuffer.clear();
+        }
+        if(leftBuffer!=null) {
+            leftBuffer.clear();
+        }
+
+        if (CLEANUP_FILES) {
+            for (File file: leftFiles) {
+                file.delete();
+            }
+
+            for (File file: rightFiles) {
+                file.delete();
+            }
+        }
+
+        return super.close();
     }
 
     private void initializeRightBuffer() throws IOException, ClassNotFoundException {
