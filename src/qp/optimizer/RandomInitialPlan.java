@@ -61,6 +61,7 @@ public class RandomInitialPlan {
         if (numJoin != 0) {
             createJoinOp();
         }
+        createGroupbyOperator();
         if (sqlquery.getOrderByList().size() > 0) {
             createSortOp();
         }
@@ -222,6 +223,17 @@ public class RandomInitialPlan {
         operator.setSchema(root.getSchema());
         root = operator;
 
+    }
+
+    /**
+     * Creates a groupby operator.
+     */
+    private void createGroupbyOperator() {
+        if (sqlquery.isGroupby()) {
+            GroupBy operator = new GroupBy(root, sqlquery.isAsc(), sqlquery.isDesc(), sqlquery.getGroupByList(), OpType.GROUPBY, 7);
+            operator.setSchema(root.getSchema());
+            root = operator;
+        }
     }
 
     private void modifyHashtable(Operator old, Operator newop) {

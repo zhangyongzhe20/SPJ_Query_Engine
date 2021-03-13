@@ -5,6 +5,8 @@
 package qp.utils;
 
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Vector;
 
 public class SQLQuery {
 
@@ -125,6 +127,12 @@ public class SQLQuery {
     public void setOrderByList(ArrayList<Attribute> list) { orderbyList = list; }
 
     public ArrayList<Attribute> getOrderByList() { return orderbyList; }
+
+
+    public boolean isGroupby() {
+        return groupbyList != null && !groupbyList.isEmpty();
+    }
+
 
     public int getNumJoin() {
         if (joinList == null)
