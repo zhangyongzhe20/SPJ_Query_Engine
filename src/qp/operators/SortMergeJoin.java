@@ -93,6 +93,14 @@ public class SortMergeJoin extends Join {
         leftSort.close();
         rightSort.close();
 
+        try {
+            initializeRightBuffer();
+        } catch (Exception e) {
+            System.out.println("Pokemon gotta catch 'em all");
+            e.printStackTrace();
+            return false;
+        }
+
         // materialized sorted files
         return true;
     }
