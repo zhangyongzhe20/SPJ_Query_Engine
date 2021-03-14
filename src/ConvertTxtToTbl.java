@@ -11,6 +11,7 @@ import qp.utils.Tuple;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.StringTokenizer;
 
 public class ConvertTxtToTbl {
@@ -59,6 +60,10 @@ public class ConvertTxtToTbl {
                     data.add(Float.valueOf(dataElement));
                 } else if (datatype == Attribute.STRING) {
                     data.add(dataElement);
+                } else if (datatype == Attribute.TIME) {
+                    int value = Integer.valueOf(dataElement);
+                    data.add(new Date((long) value));
+                    break;
                 } else {
                     System.err.println("Invalid data type");
                     System.exit(1);

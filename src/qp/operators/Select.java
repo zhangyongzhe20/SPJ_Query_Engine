@@ -6,6 +6,8 @@ package qp.operators;
 
 import qp.utils.*;
 
+import java.util.Date;
+
 public class Select extends Operator {
 
     Operator base;  // Base operator
@@ -133,6 +135,7 @@ public class Select extends Operator {
         int datatype = schema.typeOf(attr);
         Object srcValue = tuple.dataAt(index);
         int exprtype = con.getExprType();
+        String checkValue = (String) con.getRhs();
 
         if (datatype == Attribute.INT) {
             int srcVal = ((Integer) srcValue).intValue();
@@ -214,6 +217,28 @@ public class Select extends Operator {
                 if (srcVal != checkVal) return true;
             } else {
                 System.out.println("Select: Incorrect condition operator");
+            }
+        } else if (datatype == Attribute.TIME) {
+
+            Date srcVal = (Date) srcValue;
+            int checkMillis = Integer.parseInt(checkValue);
+            Date checkVal = new Date((long) checkMillis);
+            int comparisionResult = srcVal.compareTo(checkVal);
+
+            if (exprtype == Condition.LESSTHAN) {
+                return comparisionResult < 0;
+            } else if (exprtype == Condition.GREATERTHAN) {
+                return comparisionResult > 0;
+            } else if (exprtype == Condition.LTOE) {
+                return comparisionResult <= 0;
+            } else if (exprtype == Condition.GTOE) {
+                return comparisionResult >= 0;
+            } else if (exprtype == Condition.EQUAL) {
+                return comparisionResult == 0;
+            } else if (exprtype == Condition.NOTEQUAL) {
+                return comparisionResult != 0;
+            } else {
+                System.out.println("Select:incorrect condition operator");
             }
         }
         return false;

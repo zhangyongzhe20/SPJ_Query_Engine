@@ -9,6 +9,7 @@ public class RandomDB {
     static boolean[] pk;
     static HashMap<Integer, HashSet<Integer>> fk = new HashMap<>();
     private static Random random;
+    private static final int MILLIS_IN_DAY = 24 * 60 * 60 * 1000;
 
     public RandomDB() {
         random = new Random(System.currentTimeMillis());
@@ -77,6 +78,8 @@ public class RandomDB {
                     // System.out.println("String");
                 } else if (datatype[i].equals("REAL")) {
                     type = Attribute.REAL;
+                } else if (datatype[i].equals("TIME")) {
+                    type = Attribute.TIME;
                 } else {
                     type = -1;
                     System.err.println("invalid data type");
@@ -122,6 +125,9 @@ public class RandomDB {
                     } else if (datatype[j].equals("FLOAT")) {
                         float value = range[j] * random.nextFloat();
                         outtbl.print(value + "\t");
+                    } else if (datatype[j].equals("TIME")) {
+                        outtbl.print(random.nextInt(MILLIS_IN_DAY) + "\t");
+                        break;
                     } else if (datatype[j].equals("INTEGER")) {
                         if (keytype[j].equals("PK")) {
                             int numb = random.nextInt(range[0]);
@@ -152,6 +158,9 @@ public class RandomDB {
                     outstat.print(numtuple + "\t");
                 } else if (datatype[i].equals("FLOAT")) {
                     outstat.print(numtuple + "\t");
+                } else if (datatype[i].equals("TIME")) {
+                    outstat.print(numtuple + "\t");
+                    break;
                 } else if (datatype[i].equals("INTEGER")) {
                     if (keytype[i].equals("PK")) {
                         int numdist = rdb.getnumdistinct(pk);

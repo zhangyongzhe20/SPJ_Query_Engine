@@ -5,10 +5,7 @@ import qp.utils.Condition;
 import qp.utils.Tuple;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 public class SortMergeJoin extends Join{
     private Batch leftBatch;
@@ -167,7 +164,8 @@ public class SortMergeJoin extends Join{
                 return ((String) leftValue).compareTo((String) rightValue);
             case Attribute.REAL:
                 return Float.compare((float) leftValue, (float) rightValue);
-            //TODO: if needed, can add more attributes here such as TIME
+            case Attribute.TIME:
+                return ((Date) leftValue).compareTo((Date) rightValue);
             default:
                 return 0;
         }

@@ -13,6 +13,8 @@ import qp.parser.parser;
 import qp.utils.*;
 
 import java.io.*;
+import java.sql.Time;
+import java.util.Date;
 
 public class QueryMain {
 
@@ -218,7 +220,10 @@ public class QueryMain {
                 out.print(((Integer) data).intValue() + "\t");
             } else if (data instanceof Float) {
                 out.print(((Float) data).floatValue() + "\t");
-            } else if (data == null) {
+            } else if (data instanceof Date) {
+                out.print(((Date) data).getTime() + "\t");
+            }
+            else if (data == null) {
                 out.print("-NULL-\t");
             } else {
                 out.print(((String) data) + "\t");
