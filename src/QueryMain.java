@@ -1,6 +1,6 @@
 /**
  * This is main driver program of the query processor
- * java QueryMain query1.sql out.txt 100 1000
+ * java QueryMain query1.sql out.txt 512 1024
  **/
 
 import qp.operators.Debug;
@@ -14,6 +14,7 @@ import qp.utils.*;
 
 import java.io.*;
 import java.sql.Time;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class QueryMain {
@@ -221,7 +222,8 @@ public class QueryMain {
             } else if (data instanceof Float) {
                 out.print(((Float) data).floatValue() + "\t");
             } else if (data instanceof Date) {
-                out.print(((Date) data).getTime() + "\t");
+                long res = (((Date) data).getTime());
+                out.printf("%04d \t",res); //format the time back into HHmm format
             }
             else if (data == null) {
                 out.print("-NULL-\t");

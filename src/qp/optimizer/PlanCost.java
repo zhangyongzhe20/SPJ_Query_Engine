@@ -255,7 +255,7 @@ public class PlanCost {
         }
         StringTokenizer tokenizer = new StringTokenizer(line);
         if (tokenizer.countTokens() != 1) {
-            System.out.println("incorrect format of statastics file " + filename);
+            System.out.println("incorrect format of statistics file " + filename);
             System.exit(1);
         }
         String temp = tokenizer.nextToken();

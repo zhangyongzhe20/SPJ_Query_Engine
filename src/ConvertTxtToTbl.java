@@ -50,7 +50,6 @@ public class ConvertTxtToTbl {
 
             ArrayList<Object> data = new ArrayList<>();
             int attrIndex = 0;
-
             while (tokenizer.hasMoreElements()) {
                 String dataElement = tokenizer.nextToken();
                 int datatype = schema.typeOf(attrIndex);
@@ -63,7 +62,6 @@ public class ConvertTxtToTbl {
                 } else if (datatype == Attribute.TIME) {
                     int value = Integer.valueOf(dataElement);
                     data.add(new Date((long) value));
-                    break;
                 } else {
                     System.err.println("Invalid data type");
                     System.exit(1);
