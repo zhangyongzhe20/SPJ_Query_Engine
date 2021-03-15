@@ -88,7 +88,11 @@ public class RandomOptimizer {
             Operator base = makeExecPlan(((Sort) node).getBase());
             ((Sort) node).setBase(base);
             return node;
-        } else {
+        } else if (node.getOpType() == OpType.DISTINCT) {
+            Operator base = makeExecPlan(((Distinct) node).getBase());
+            ((Distinct) node).setBase(base);
+            return node;
+        }else {
             return node;
         }
     }
