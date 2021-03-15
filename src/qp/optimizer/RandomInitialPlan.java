@@ -4,6 +4,7 @@
 
 package qp.optimizer;
 
+import org.w3c.dom.Attr;
 import qp.operators.*;
 import qp.utils.*;
 
@@ -64,9 +65,9 @@ public class RandomInitialPlan {
 
         createProjectOp();
 
-        if (sqlquery.getOrderByList().size() > 0 && !sqlquery.isDistinct()) {
-            createSortOp();
-        }
+        // drop orderbylist if they dont appear in final attribute list
+        orderbylist.retainAll(root.getSchema().getAttList());
+        createSortOp();
 
         if(sqlquery.isDistinct()) {
             createDistinctOp();
@@ -76,25 +77,21 @@ public class RandomInitialPlan {
     }
 
     public void createDistinctOp() {
-        // TODO for subsets of orderby, project= * gives []
-        System.out.println(projectlist);
-        if (!projectlist.isEmpty()) {
-            Sort s = new Sort(root, sqlquery.isAsc(), sqlquery.isDesc(), projectlist, OpType.SORT, 7);
-            Schema newSchema = root.getSchema();
-            s.setSchema(newSchema);
-            Distinct d = new Distinct(s, sqlquery.isAsc(), sqlquery.isDesc(), projectlist, OpType.DISTINCT, 7);
-            Schema newSchema2 = s.getSchema();
-            d.setSchema(newSchema2);
-            root = d;
-        }
+        ArrayList<Attribute> finalAttrs = root.getSchema().getAttList();
+        Distinct d = new Distinct(root, sqlquery.isAsc(), sqlquery.isDesc(), finalAttrs, OpType.DISTINCT, 7);
+        Schema newSchema2 = root.getSchema();
+        d.setSchema(newSchema2);
+        root = d;
     }
 
     public void createSortOp() {
-        Operator tempop = root;
-        // TODO previously had error trying to get numBuff to pass in, often 0 buffers
+        // TODO buffer issue
+        // if nothing to orderby then return
+        if (orderbylist.size() == 0) {
+            return;
+        }
         Sort op1 = new Sort(root, sqlquery.isAsc(), sqlquery.isDesc(), orderbylist, OpType.SORT, 7);
-        /** set the schema same as base relation **/
-        op1.setSchema(tempop.getSchema());
+        op1.setSchema(root.getSchema());
         root = op1;
     }
 
