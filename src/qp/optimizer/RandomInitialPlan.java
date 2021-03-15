@@ -4,6 +4,7 @@
 
 package qp.optimizer;
 
+import org.w3c.dom.Attr;
 import qp.operators.*;
 import qp.utils.*;
 
@@ -50,11 +51,6 @@ public class RandomInitialPlan {
      **/
     public Operator prepareInitialPlan() {
 
-        if (sqlquery.isDistinct()) {
-            System.err.println("Distinct is not implemented.");
-            System.exit(1);
-        }
-
         if (sqlquery.getGroupByList().size() > 0) {
             System.err.println("GroupBy is not implemented.");
             System.exit(1);
@@ -66,32 +62,37 @@ public class RandomInitialPlan {
         if (numJoin != 0) {
             createJoinOp();
         }
-        if (sqlquery.getOrderByList().size() > 0) {
-            createSortOp();
-        }
+
         createProjectOp();
+
+        // drop orderbylist if they dont appear in final attribute list
+        orderbylist.retainAll(root.getSchema().getAttList());
+        createSortOp();
+
+        if(sqlquery.isDistinct()) {
+            createDistinctOp();
+        }
 
         return root;
     }
 
+    public void createDistinctOp() {
+        ArrayList<Attribute> finalAttrs = root.getSchema().getAttList();
+        Distinct d = new Distinct(root, sqlquery.isAsc(), sqlquery.isDesc(), finalAttrs, OpType.DISTINCT, 7);
+        Schema newSchema2 = root.getSchema();
+        d.setSchema(newSchema2);
+        root = d;
+    }
+
     public void createSortOp() {
-        // TODO: sub-task: aim to support multi attribute sort on a single table
-        // TODO: sub-task: support multi attribute sort on 2 or more tables
-        Sort op1 = null;
-
-        String tabname = orderbylist.get(0).getTabName();
-        Operator tempop = (Operator) tab_op_hash.get(tabname);
-        // TODO previously had error trying to get numBuff to pass in, often 0 buffers
-        op1 = new Sort(tempop, sqlquery.isAsc(), sqlquery.isDesc(), orderbylist, OpType.SORT, 7);
-        /** set the schema same as base relation **/
-        op1.setSchema(tempop.getSchema());
-        modifyHashtable(tempop, op1);
-
-        /** The last selection is the root of the plan tre
-         ** constructed thus far
-         **/
-        if (orderbylist.size() != 0)
-            root = op1;
+        // TODO buffer issue
+        // if nothing to orderby then return
+        if (orderbylist.size() == 0) {
+            return;
+        }
+        Sort op1 = new Sort(root, sqlquery.isAsc(), sqlquery.isDesc(), orderbylist, OpType.SORT, 7);
+        op1.setSchema(root.getSchema());
+        root = op1;
     }
 
     /**
