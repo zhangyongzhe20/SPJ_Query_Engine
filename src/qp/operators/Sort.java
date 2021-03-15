@@ -273,9 +273,14 @@ public class Sort extends Operator {
     }
 
     public Object clone() {
-        // TODO
-        System.out.println("CLONED");
-        return null;
+        Operator newbase = (Operator) base.clone();
+        ArrayList<Attribute> newattr = new ArrayList<>();
+        for (int i = 0; i < sortOn.size(); ++i)
+            newattr.add((Attribute) sortOn.get(i).clone());
+        Sort newproj = new Sort(newbase, false, isDesc, newattr, optype, numBuff);
+        Schema newSchema = newbase.getSchema();
+        newproj.setSchema(newSchema);
+        return newproj;
     }
 
     class AttrComparator implements Comparator<Tuple> {

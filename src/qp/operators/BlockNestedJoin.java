@@ -78,7 +78,7 @@ public class BlockNestedJoin extends Join {
              ** into a file
              **/
             filenum++;
-            rfname = "NJtemp-" + String.valueOf(filenum);
+            rfname = "BNJtemp-" + String.valueOf(filenum);
             try {
                 ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(rfname));
                 while ((rightpage = right.next()) != null) {
@@ -134,7 +134,7 @@ public class BlockNestedJoin extends Join {
                     in = new ObjectInputStream(new FileInputStream(rfname));
                     eosr = false;
                 } catch (IOException io) {
-                    System.err.println("NestedJoin:error in reading the file");
+                    System.err.println("BlockNestedJoin:error in reading the file");
                     System.exit(1);
                 }
 
