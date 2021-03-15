@@ -123,7 +123,6 @@ public class PlanCost {
         long rightcapacity = Math.max(1, Batch.getPageSize() / righttuplesize);
         long leftpages = (long) Math.ceil(((double) lefttuples) / (double) leftcapacity);
         long rightpages = (long) Math.ceil(((double) righttuples) / (double) rightcapacity);
-        System.out.println("left pages: "+ leftpages);
         double tuples = (double) lefttuples * righttuples;
         for (Condition con : node.getConditionList()) {
             Attribute leftjoinAttr = con.getLhs();
@@ -148,7 +147,6 @@ public class PlanCost {
         long numbuff = BufferManager.getBuffersPerJoin();
         long joincost;
 
-        System.out.println("ht: " + ht);
         switch (joinType) {
             case JoinType.NESTEDJOIN:
                 joincost = leftpages * rightpages;

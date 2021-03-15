@@ -31,11 +31,14 @@ public class QueryMain {
         Batch.setPageSize(getPageSize(args, in));
 
         SQLQuery sqlquery = getSQLQuery(args[0]);
-        System.out.println("isDesc: " + sqlquery.isDesc());
-        System.out.println("isAsc: " + sqlquery.isAsc());
+//        System.out.println("isDesc: " + sqlquery.isDesc());
+//        System.out.println("isAsc: " + sqlquery.isAsc());
         configureBufferManager(sqlquery.getNumJoin(), args, in);
 
         Operator root = getQueryPlan(sqlquery);
+//        for(Attribute atr : root.getSchema().getAttList()) {
+//            System.err.println(atr);
+//        }
         printFinalPlan(root, args, in);
         executeQuery(root, args[1]);
     }
@@ -123,6 +126,7 @@ public class QueryMain {
         RandomOptimizer optimizer = new RandomOptimizer(sqlquery);
         Operator planroot = optimizer.getOptimizedPlan();
 
+
         if (planroot == null) {
             System.out.println("DPOptimizer: query plan is null");
             System.exit(1);
@@ -182,10 +186,12 @@ public class QueryMain {
 
         /** Print each tuple in the result **/
         Batch resultbatch;
-        while ((resultbatch = root.next()) != null) {
+        resultbatch = root.next();
+        while (resultbatch!= null) {
             for (int i = 0; i < resultbatch.size(); ++i) {
                 printTuple(resultbatch.get(i));
             }
+            resultbatch = root.next();
         }
         root.close();
         out.close();
@@ -214,14 +220,19 @@ public class QueryMain {
 
     protected static void printTuple(Tuple t) {
         for (int i = 0; i < numAtts; ++i) {
-            Object data = t.dataAt(i);
+            try {
+                Object data = t.dataAt(i);
 
-            if (data instanceof Integer) {
-                out.print(((Integer) data).intValue() + "\t");
-            } else if (data instanceof Float) {
-                out.print(((Float) data).floatValue() + "\t");
-            }  else {
-                out.print(((String) data) + "\t");
+                if (data instanceof Integer) {
+                    out.print(((Integer) data).intValue() + "\t");
+                } else if (data instanceof Float) {
+                    out.print(((Float) data).floatValue() + "\t");
+                } else {
+                    out.print(((String) data) + "\t");
+                }
+            } catch (IndexOutOfBoundsException e) {
+                System.err.println(e.getMessage());
+                e.printStackTrace();
             }
         }
         out.println();
