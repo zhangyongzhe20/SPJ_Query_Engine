@@ -79,10 +79,10 @@ public class RandomInitialPlan {
         // TODO for subsets of orderby, project= * gives []
         System.out.println(projectlist);
         if (!projectlist.isEmpty()) {
-            Sort s = new Sort(root, sqlquery.isAsc(), sqlquery.isDesc(), orderbylist, OpType.SORT, 7);
+            Sort s = new Sort(root, sqlquery.isAsc(), sqlquery.isDesc(), projectlist, OpType.SORT, 7);
             Schema newSchema = root.getSchema();
             s.setSchema(newSchema);
-            Distinct d = new Distinct(s, sqlquery.isAsc(), sqlquery.isDesc(), orderbylist, OpType.DISTINCT, 7);
+            Distinct d = new Distinct(s, sqlquery.isAsc(), sqlquery.isDesc(), projectlist, OpType.DISTINCT, 7);
             Schema newSchema2 = s.getSchema();
             d.setSchema(newSchema2);
             root = d;

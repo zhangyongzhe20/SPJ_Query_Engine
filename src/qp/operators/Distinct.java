@@ -92,6 +92,10 @@ public class Distinct extends Operator {
             if (start == 0) {
                 incomingBatch = base.next();
 
+                if(incomingBatch != null) {
+                    Debug.PPrint(incomingBatch);
+                }
+
                 if (incomingBatch == null) {
                     isEOS = true;
                     return outgoingBatch;
@@ -102,9 +106,13 @@ public class Distinct extends Operator {
             for (i = start; i < incomingBatch.size() && (!outgoingBatch.isFull()); i++) {
                 Tuple present = incomingBatch.get(i);
 
+                System.out.println(sortOn);
+                System.out.println(sortOnIndexList);
 
+                boolean t = prev == null || Tuple.compareTuples(prev, present, sortOnIndexList, sortOnIndexList) != 0;
+                System.out.println(t);
                 // If this is the first tuple read from the sorted batch/different from the last unique tuple present
-                if (prev == null || Tuple.compareTuples(prev, present, sortOnIndexList, sortOnIndexList) != 0) {
+                if (t) {
                     outgoingBatch.add(present);
                     prev = present;
                 }
