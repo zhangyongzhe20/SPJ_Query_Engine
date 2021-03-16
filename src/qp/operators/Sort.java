@@ -49,7 +49,6 @@ public class Sort extends Operator {
      * Open file prepare a stream pointer to read input file
      */
     public boolean open() {
-        System.out.println("Sort.Open() called");
         if(!base.open()) {
             System.out.println("Error in base.open() in sort");
             System.exit(3);
@@ -78,8 +77,6 @@ public class Sort extends Operator {
         }
 
         this.completeFile = filenames.get(0);
-
-        System.out.println("Sort.Open() completed successfully");
         return true;
     }
 
@@ -221,7 +218,6 @@ public class Sort extends Operator {
         TupleWriter tw;
         ArrayList<Tuple> toSort = new ArrayList<>();
 
-        System.out.println("numbuff = " + numBuff);
         int counter = 0;
         boolean flag = false;
 

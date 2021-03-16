@@ -180,8 +180,8 @@ public class QueryMain {
         /** Print the schema of the result **/
         Schema schema = root.getSchema();
         numAtts = schema.getNumCols();
-        System.out.println("# of attributes: " + numAtts);
-        Debug.PPrint(schema);
+//        System.out.println("# of attributes: " + numAtts);
+//        Debug.PPrint(schema);
         printSchema(schema);
 
         /** Print each tuple in the result **/
