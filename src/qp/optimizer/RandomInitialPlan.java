@@ -50,10 +50,6 @@ public class RandomInitialPlan {
      **/
     public Operator prepareInitialPlan() {
 
-        if (sqlquery.getGroupByList().size() > 0) {
-            System.err.println("GroupBy is not implemented.");
-            System.exit(1);
-        }
 
         tab_op_hash = new HashMap<>();
         createScanOp();
@@ -62,28 +58,43 @@ public class RandomInitialPlan {
             createJoinOp();
         }
 
-        createProjectOp();
 
+        int grouplistsize = sqlquery.getGroupByList().size();
+        if (grouplistsize>0) {
+            System.out.println("a");
+            createGroupbyOp();
+        }
+
+        createProjectOp();
         // drop orderbylist if they dont appear in final attribute list
         orderbylist.retainAll(root.getSchema().getAttList());
 
+
+
         if(sqlquery.isDistinct() && orderbylist.size() == 0) {
+            System.out.println("Is distinct");
             // repopulate orderbylist using root attrs
             orderbylist = root.getSchema().getAttList();
             createSortOp();
             createDistinctOp();
+
             System.out.println("Case1: Have distinct but no effective orderby");
         } else if (sqlquery.isDistinct() && orderbylist.size() > 0) {
             createSortOp();
             createDistinctOp();
+
             System.out.println("Case2: Distinct and effective orderby detected");
         } else if (!sqlquery.isDistinct() && orderbylist.size() == 0) {
             // do nothing
+
             System.out.println("Case3: No distinct or effective orderby detected");
         } else if (!sqlquery.isDistinct() && orderbylist.size() > 0) {
             createSortOp();
+
             System.out.println("Case4: No distinct but have effective orderby");
         }
+
+
 
         return root;
     }
@@ -101,6 +112,15 @@ public class RandomInitialPlan {
         Sort op1 = new Sort(root, sqlquery.isAsc(), sqlquery.isDesc(), orderbylist, OpType.SORT, 7);
         op1.setSchema(root.getSchema());
         root = op1;
+    }
+
+    /**
+     * Creates a groupby operator.
+     */
+    private void createGroupbyOp() {
+        GroupBy operator = new GroupBy(root, sqlquery.isAsc(), sqlquery.isDesc(), sqlquery.getGroupByList(), OpType.GROUPBY, 7);
+        operator.setSchema(root.getSchema());
+        root = operator;
     }
 
     /**
