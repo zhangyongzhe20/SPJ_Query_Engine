@@ -6,36 +6,39 @@ import qp.utils.Tuple;
 
 import java.io.*;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 public class SortMergeJoin extends Join {
+    //delete temp files of from external sort
+    private static boolean CLEAN_FILES = true;
 
-    private static boolean CLEANUP_FILES = true;
-
-    private int leftJoinAttrIdx;
-    private int rightJoinAttrIdx;
+    // the index of join attribute of left/right tuple
+    private int leftAttrIdx;
+    private int rightAttrIdx;
 
     private int batchSize;
 
-    private List<File> leftFiles;
-    private List<File> rightFiles;
+    //??
+    private int leftBatchIdx = -1;
+    private Batch leftBatch;
 
-    private int leftBufferIdx = -1;
-    private Batch leftBuffer;
+    private int rightRunningBufferIdx = -1;
+    private Batch rightRunningBuffer;
 
-    private int rightBufferOffset = 0;
+    private int rightBufferIdx = 0;
+    // size is buffer - 3
+    private int rightBufferSize;
     private List<Batch> rightBuffer = new LinkedList<>();
 
-    private Batch rightRunningBuffer;
-    private int rightRunningBufferIdx = -1;
-
-    private int rightBufferSize;
 
     private int leftTupleIdx;
     private int rightTupleIdx;
     private int rightFirstMatchIdx;
     private boolean hasMatch;
+
+
+    private List<File> leftFiles;
+    private List<File> rightFiles;
     //left attributes
     ArrayList<Attribute> leftAttrs = new ArrayList<>();
     ArrayList<Attribute> rightAttrs = new ArrayList<>();
@@ -56,9 +59,9 @@ public class SortMergeJoin extends Join {
         // get the leftIndex and rightIndex; TODO: only implemented one condition
         Attribute leftAttr = getCondition().getLhs();
         Attribute rightAttr = (Attribute) getCondition().getRhs();
-        leftJoinAttrIdx = left.getSchema().indexOf(leftAttr);
-        rightJoinAttrIdx = right.getSchema().indexOf(rightAttr);
-        System.err.println(leftJoinAttrIdx + ": " + rightJoinAttrIdx);
+        leftAttrIdx = left.getSchema().indexOf(leftAttr);
+        rightAttrIdx = right.getSchema().indexOf(rightAttr);
+        System.err.println(leftAttrIdx + ": " + rightAttrIdx);
         System.out.println("-----");
         System.out.println("-----");
 
@@ -81,11 +84,6 @@ public class SortMergeJoin extends Join {
 
             leftSort.close();
             rightSort.close();
-            rightFiles = writeOperatorToFile(rightSort, "right");
-
-            leftFiles = writeOperatorToFile(leftSort, "left");
-        leftSort.close();
-        rightSort.close();
         rightBufferSize = getNumBuff() - 3;
         initializeRightBuffer();
     }
@@ -128,7 +126,7 @@ public class SortMergeJoin extends Join {
             }
             Tuple leftTuple = readLeftTupleAtIndex(leftTupleIdx);
             Tuple rightTuple = readRightTupleAtIndex(rightTupleIdx);
-            int comparison = Tuple.compareTuples(leftTuple, rightTuple, leftJoinAttrIdx, rightJoinAttrIdx);
+            int comparison = Tuple.compareTuples(leftTuple, rightTuple, leftAttrIdx, rightAttrIdx);
             if (comparison < 0) {           // if left tuple < right tuple on join attribute,
                 leftTupleIdx++;      // we move to the next left tuple
                 if (hasMatch) {
@@ -200,11 +198,11 @@ public class SortMergeJoin extends Join {
         if(rightBuffer!=null) {
             rightBuffer.clear();
         }
-        if(leftBuffer!=null) {
-            leftBuffer.clear();
+        if(leftBatch !=null) {
+            leftBatch.clear();
         }
 
-        if (CLEANUP_FILES) {
+        if (CLEAN_FILES) {
             for (File file: leftFiles) {
                 file.delete();
             }
@@ -218,7 +216,7 @@ public class SortMergeJoin extends Join {
     }
 
     private void initializeRightBuffer() throws IOException, ClassNotFoundException {
-        rightBufferOffset = 0;
+        rightBufferIdx = 0;
         rightBuffer.clear();
         for (int i = 0; i < rightBufferSize; i++) {
             if (i >= rightFiles.size()) {
@@ -231,20 +229,20 @@ public class SortMergeJoin extends Join {
     }
 
     private Batch readLeftBatch(int idx) throws IOException, ClassNotFoundException, IndexOutOfBoundsException {
-        if (idx == leftBufferIdx) {
-            return leftBuffer;
+        if (idx == leftBatchIdx) {
+            return leftBatch;
         }
         File file = leftFiles.get(idx);
-        leftBuffer = readBatchFromFile(file);
-        leftBufferIdx = idx;
-        return leftBuffer;
+        leftBatch = readBatchFromFile(file);
+        leftBatchIdx = idx;
+        return leftBatch;
     }
 
     private Batch readRightBatch(int idx) throws IOException, ClassNotFoundException {
         if (isInRightBuffer(idx)) {
             return readFromBuffer(idx);
         }
-        if (idx < rightBufferOffset || rightBufferSize == 0) {
+        if (idx < rightBufferIdx || rightBufferSize == 0) {
             return readToRunningBuffer(idx);
         }
         while (!isInRightBuffer(idx)) {  // must be beyond the current buffer scope
@@ -254,11 +252,11 @@ public class SortMergeJoin extends Join {
     }
 
     private void advanceBuffer() throws IOException, ClassNotFoundException {
-        int nextRightBatchToRead = rightBufferOffset + rightBufferSize;
+        int nextRightBatchToRead = rightBufferIdx + rightBufferSize;
         rightBuffer.remove(0);
         Batch batch = readBatchFromFile(rightFiles.get(nextRightBatchToRead));
         rightBuffer.add(batch);
-        rightBufferOffset++;
+        rightBufferIdx++;
     }
 
     private Batch readToRunningBuffer(int idx) throws IOException, ClassNotFoundException {
@@ -271,11 +269,11 @@ public class SortMergeJoin extends Join {
     }
 
     private Batch readFromBuffer(int idx) {
-        return rightBuffer.get(idx - rightBufferOffset);
+        return rightBuffer.get(idx - rightBufferIdx);
     }
 
     private boolean isInRightBuffer(int idx) {
-        return (rightBufferOffset <= idx) && (idx < rightBufferOffset + rightBufferSize);
+        return (rightBufferIdx <= idx) && (idx < rightBufferIdx + rightBufferSize);
     }
 
     private List<File> writeOperatorToFile(Operator operator, String prefix) throws IOException {
