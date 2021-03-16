@@ -72,34 +72,24 @@ public class SortMergeJoin extends Join {
         rightAttrs.add(rightAttr);
         Sort leftSort = new Sort(left, true, false, leftAttrs, OpType.SORT, 3);
         Sort rightSort = new Sort(right, true, false, rightAttrs, OpType.SORT, 10);
-        if(!rightSort.open()) {
-            System.err.println("sort could not open right");
+        if (!(leftSort.open() && rightSort.open())) {
             return false;
         }
         try {
-            rightFiles = writeOperatorToFile(rightSort, "right");
-        } catch (IOException e){
-            e.printStackTrace();
-            return false;
-        }
-        if(!leftSort.open()) {
-            System.err.println("sort could not open left");
-            return false;
-        }
+            leftFiles = writeOperatorToFile(leftSort, "SMJ-Left");
+            rightFiles = writeOperatorToFile(rightSort, "SMJ-Right");
 
-        try {
+            leftSort.close();
+            rightSort.close();
+            rightFiles = writeOperatorToFile(rightSort, "right");
+
             leftFiles = writeOperatorToFile(leftSort, "left");
-        } catch (IOException e){
-            e.printStackTrace();
-            return false;
-        }
         leftSort.close();
         rightSort.close();
-
-        try {
-            rightBufferSize = getNumBuff() - 3;
-            initializeRightBuffer();
-        } catch (Exception e) {
+        rightBufferSize = getNumBuff() - 3;
+        initializeRightBuffer();
+    }
+         catch (Exception e) {
             System.out.println("Pokemon gotta catch 'em all");
             e.printStackTrace();
             return false;
