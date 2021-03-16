@@ -4,7 +4,6 @@
 
 package qp.optimizer;
 
-import org.w3c.dom.Attr;
 import qp.operators.*;
 import qp.utils.*;
 
@@ -67,10 +66,23 @@ public class RandomInitialPlan {
 
         // drop orderbylist if they dont appear in final attribute list
         orderbylist.retainAll(root.getSchema().getAttList());
-        createSortOp();
 
-        if(sqlquery.isDistinct()) {
+        if(sqlquery.isDistinct() && orderbylist.size() == 0) {
+            // repopulate orderbylist using root attrs
+            orderbylist = root.getSchema().getAttList();
+            createSortOp();
             createDistinctOp();
+            System.out.println("Case1: Have distinct but no effective orderby");
+        } else if (sqlquery.isDistinct() && orderbylist.size() > 0) {
+            createSortOp();
+            createDistinctOp();
+            System.out.println("Case2: Distinct and effective orderby detected");
+        } else if (!sqlquery.isDistinct() && orderbylist.size() == 0) {
+            // do nothing
+            System.out.println("Case3: No distinct or effective orderby detected");
+        } else if (!sqlquery.isDistinct() && orderbylist.size() > 0) {
+            createSortOp();
+            System.out.println("Case4: No distinct but have effective orderby");
         }
 
         return root;
@@ -86,10 +98,6 @@ public class RandomInitialPlan {
 
     public void createSortOp() {
         // TODO buffer issue
-        // if nothing to orderby then return
-        if (orderbylist.size() == 0) {
-            return;
-        }
         Sort op1 = new Sort(root, sqlquery.isAsc(), sqlquery.isDesc(), orderbylist, OpType.SORT, 7);
         op1.setSchema(root.getSchema());
         root = op1;
