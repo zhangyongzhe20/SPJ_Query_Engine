@@ -5,21 +5,30 @@ import qp.utils.Batch;
 import qp.utils.Schema;
 import qp.utils.Tuple;
 
-import java.io.ObjectInputStream;
 import java.util.ArrayList;
 
 public class GroupBy extends Operator {
-    Operator base;                              // the base operator
-    private ArrayList<Attribute> groupbyList;   // Set of attributes to group by
-    private int batchsize;                      // Number of tuples per out batch
-    private int numBuff;                        // Number of buffers available
-    private boolean eos = false;                // records whether we have reached end of stream
+    Batch incomingBatch;
+    Batch outgoingBatch;
+    Tuple prev;
+    int start;
+    ArrayList<Integer> sortOnIndexList;
+    Schema schema;
+    Operator base;
+    ArrayList<Attribute> sortOn;
+    boolean isEOS;
+    int batchsize;
+    boolean isDesc;
+    int numBuff;
 
-    private ArrayList<Integer> projectIndices = new ArrayList<>();  // Set of index of the attributes in the base operator that are to be projected
-    private Distinct sortedBase;            // the sort operator being applied on the base operator
-    private boolean isAsc;
-    private boolean isDesc;
-
+    public GroupBy(Operator base, boolean isAsc, boolean isDesc, ArrayList<Attribute> sortOn, int type, int numBuff) {
+        super(type);
+        this.base = base;
+        this.sortOn = sortOn;
+        this.schema = base.getSchema();
+        this.isDesc = isDesc;
+        this.numBuff = numBuff;
+    }
 
     public Operator getBase() {
         return base;
@@ -29,99 +38,88 @@ public class GroupBy extends Operator {
         this.base = base;
     }
 
-    public ArrayList<Attribute> getGroupByList() {
-        return groupbyList;
-    }
-
-    public void setNumBuff(int num) {
-        this.numBuff = num;
-    }
-
-    public int getNumBuff() {
-        return this.numBuff;
-    }
-
-    public GroupBy(Operator base, Boolean isAsc, Boolean isDesc, ArrayList<Attribute> groupbyList, int type, int numBuff) {
-        super(type);
-        this.base = base;
-        this.groupbyList = groupbyList;
-        this.isAsc = isAsc;
-        this.isDesc = isDesc;
-        this.numBuff = numBuff;
-    }
-
-    /**
-     * During open
-     * * Runs External Sort on base operator
-     **/
-    public boolean open() {
-        int tuplesize = schema.getTupleSize();
-        batchsize = Batch.getPageSize() / tuplesize;
-        for (Object attribute : this.groupbyList) {
-            projectIndices.add(schema.indexOf( (Attribute) attribute));
-        }
-        sortedBase = new Distinct(base, isAsc, isDesc, groupbyList, OpType.DISTINCT, 7);
-        sortedBase.setSchema(schema);
-        if (!sortedBase.open()) {
-            System.out.println("External sort failed to open");
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * Read next tuple from operator
-     */
-    public Batch next() {
-        Batch inBatch = null; // input batch
-        int inIndex = 0; // the index for the current element being read from input batch
-
-        if (eos) {
-            close();
-            return null;
-        } else if (inBatch == null) {
-            inBatch = sortedBase.next();
-        }
-
-        Batch outBatch = new Batch(batchsize);
-
-        while (!outBatch.isFull()) {
-
-            // if finished scanning
-            if (inBatch == null || inBatch.size() <= inIndex) {
-                eos = true;
-                break;
-            }
-
-            Tuple current = inBatch.get(inIndex);
-            if (current != null)
-                outBatch.add(current);
-            inIndex++;
-
-            if (inIndex == batchsize) {
-                inBatch = sortedBase.next();
-                inIndex = 0;
-            }
-        }
-        return outBatch;
-    }
-
-    /**
-     * Close the operator
-     */
     public boolean close() {
-        return sortedBase.close();
+        return true;
     }
 
     public Object clone() {
         Operator newbase = (Operator) base.clone();
-        ArrayList<Attribute> newattr = new ArrayList<>();
-        for (int i = 0; i < groupbyList.size(); ++i)
-            newattr.add((Attribute) groupbyList.get(i).clone());
-        GroupBy newGroupBy = new GroupBy(newbase, isAsc, isDesc, newattr, optype,7);
-        Schema newSchema = newbase.getSchema().subSchema(newattr);
-        newGroupBy.setSchema(newSchema);
-        newGroupBy.setNumBuff(numBuff);
-        return newGroupBy;
+        GroupBy newproj = new GroupBy(newbase, false, isDesc, sortOn, optype, numBuff);
+        Schema newSchema = newbase.getSchema();
+        newproj.setSchema(newSchema);
+        return newproj;
+    }
+
+    @Override
+    public boolean open() {
+        System.out.println("GROUPBY CALLED OPEN");
+        System.out.println("GROUPBY:"+sortOn.size());
+        isEOS = false;
+        start = 0;
+        prev = null;
+
+        int tuplesize = schema.getTupleSize();
+        batchsize = Batch.getPageSize() / tuplesize;
+
+        this.sortOnIndexList = new ArrayList<>();
+        for(Attribute a : sortOn) {
+            if (schema == null) System.out.println("SCHEMA NULL");
+            int index = schema.indexOf(a);
+            sortOnIndexList.add(index);
+        }
+
+        if(!base.open()) {
+            System.out.println("Cannot open base from GROUPBY");
+            System.exit(1);
+        }
+        return true;
+    }
+    @Override
+    public Batch next() {
+        System.out.println("GROUPBY CALLED NEXT");
+        int i;
+        if (isEOS) {
+            base.close();
+            return null;
+        }
+
+        outgoingBatch = new Batch(batchsize);
+
+        // Main reading loop. Retrieves batch by batch tuples
+        while (!outgoingBatch.isFull()) {
+            if (start == 0) {
+                incomingBatch = base.next();
+
+                if(incomingBatch != null) {
+                    System.out.println("Incoming batch");
+                    Debug.PPrint(incomingBatch);
+                }
+
+                if (incomingBatch == null) {
+                    isEOS = true;
+                    return outgoingBatch;
+                }
+            }
+
+            // Keep reading in tuples and then compare to predecessor to check for uniqueness
+            for (i = start; i < incomingBatch.size() && (!outgoingBatch.isFull()); i++) {
+                Tuple present = incomingBatch.get(i);
+
+                boolean t = prev == null || Tuple.compareTuples(prev, present, sortOnIndexList, sortOnIndexList) != 0;
+                System.out.println(t);
+                // If this is the first tuple read from the sorted batch/different from the last unique tuple present
+                if (t) {
+                    outgoingBatch.add(present);
+                    prev = present;
+                }
+            }
+
+            if (i == incomingBatch.size())
+                start = 0;
+            else
+                start = i;
+        }
+
+        return outgoingBatch;
     }
 }

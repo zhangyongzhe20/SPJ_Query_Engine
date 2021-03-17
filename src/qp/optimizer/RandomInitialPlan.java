@@ -68,21 +68,31 @@ public class RandomInitialPlan {
         if(sqlquery.isDistinct() && orderbylist.size() == 0 && grouplistsize>0) {
             // repopulate orderbylist using root attrs
             orderbylist = root.getSchema().getAttList();
+            createSortOp(); //sort operator for groupby operator
             createGroupbyOp();
+
             createSortOp();
             createDistinctOp();
             System.out.println("Case1: Have distinct but no effective orderby");
         } else if (sqlquery.isDistinct() && orderbylist.size() > 0 && grouplistsize>0) {
+            orderbylist = root.getSchema().getAttList();
+            createSortOp(); //sort operator for groupby operator
             createGroupbyOp();
+
             createSortOp();
             createDistinctOp();
             System.out.println("Case2: Distinct and effective orderby detected");
         } else if (!sqlquery.isDistinct() && orderbylist.size() == 0 && grouplistsize>0) {
             // do nothing
+            orderbylist = root.getSchema().getAttList();
+            createSortOp();//sort operator for groupby operator
             createGroupbyOp();
             System.out.println("Case3: No distinct or effective orderby detected");
         } else if (!sqlquery.isDistinct() && orderbylist.size() > 0 && grouplistsize>0) {
+            orderbylist = root.getSchema().getAttList();
+            createSortOp(); //sort operator for groupby operator
             createGroupbyOp();
+
             createSortOp();
             System.out.println("Case4: No distinct but have effective orderby");
         } else if(sqlquery.isDistinct() && orderbylist.size() == 0 && grouplistsize==0) {
