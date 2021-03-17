@@ -41,7 +41,7 @@ public class Sort extends Operator {
     public void setBase(Operator base) {
         this.base = base;
     }
-
+    
     public int getNumBuff() {
         return numBuff;
     }
@@ -50,7 +50,6 @@ public class Sort extends Operator {
      * Open file prepare a stream pointer to read input file
      */
     public boolean open() {
-        System.out.println("Sort.Open() called");
         if(!base.open()) {
             System.out.println("Error in base.open() in sort");
             System.exit(3);
@@ -63,13 +62,11 @@ public class Sort extends Operator {
         this.schema = base.getSchema(); // TODO or should it be this.getSchema()?
 
         ArrayList<String> filenames = generateSortedRuns();
-        System.out.println(filenames);
 
         while(filenames.size() != 1) {
             ArrayList<ArrayList<String>> runGroups = groupRuns(numBuff - 1, filenames);
             filenames.clear();
             for(ArrayList<String> runGroup : runGroups) {
-                System.out.println("rungrps : " + runGroup);
                 // dont merge last run if it is a single run
                 if(runGroup.size() == 1) {
                     filenames.add(runGroup.get(0));
@@ -81,8 +78,6 @@ public class Sort extends Operator {
         }
 
         this.completeFile = filenames.get(0);
-
-        System.out.println("Sort.Open() completed successfully");
         return true;
     }
 
@@ -91,7 +86,6 @@ public class Sort extends Operator {
 
         // give 1 buffer to each run
         int limit = Math.min(runGroup.size(), numBuff-1); // may waste buffers but check correctness first
-        System.out.println("limit: " + limit);
         // init output file
         String outname = "next"+runGroup.get(0);
         TupleWriter output = new TupleWriter(outname, batchSize);
@@ -225,7 +219,6 @@ public class Sort extends Operator {
         TupleWriter tw;
         ArrayList<Tuple> toSort = new ArrayList<>();
 
-        System.out.println("numbuff = " + numBuff);
         int counter = 0;
         boolean flag = false;
 
@@ -259,7 +252,6 @@ public class Sort extends Operator {
             filenames.add(filename);
 
             if(flag) {
-                System.out.println("GenerateSortedRuns wrote: " + counter + " tuples");
                 return filenames;
             }
         }

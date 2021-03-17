@@ -150,13 +150,13 @@ public class PlanCost {
          ** buffer capacity, i.e., number of tuples per page **/
         long tuplesize = node.getSchema().getTupleSize();
         long outcapacity = Math.max(1, Batch.getPageSize() / tuplesize);
+        //todo, leftschema is null
         long leftuplesize = leftschema.getTupleSize();
         long leftcapacity = Math.max(1, Batch.getPageSize() / leftuplesize);
         long righttuplesize = rightschema.getTupleSize();
         long rightcapacity = Math.max(1, Batch.getPageSize() / righttuplesize);
         long leftpages = (long) Math.ceil(((double) lefttuples) / (double) leftcapacity);
         long rightpages = (long) Math.ceil(((double) righttuples) / (double) rightcapacity);
-
         double tuples = (double) lefttuples * righttuples;
         for (Condition con : node.getConditionList()) {
             Attribute leftjoinAttr = con.getLhs();
@@ -193,8 +193,8 @@ public class PlanCost {
                 break;
             case JoinType.SORTMERGE:
                 // cost of sorting left and right page
-                double sortLeftCost = 2 * leftpages * (1 + Math.ceil(Math.log(Math.ceil((double)(leftpages / numbuff))) / Math.log(numbuff - 1)));
-                double sortRightCost = 2 * rightpages * (1 + Math.ceil(Math.log(Math.ceil((double)(rightpages / numbuff))) / Math.log(numbuff - 1)));
+                int sortLeftCost = externalSortCost((int) leftpages, (int) numbuff);
+                int sortRightCost = externalSortCost((int) rightpages, (int) numbuff);
                 // cost of merge join
                 double mergeLeftRight = leftpages + rightpages;
                 // total cost
@@ -207,6 +207,11 @@ public class PlanCost {
         cost = cost + joincost;
 
         return outtuples;
+    }
+
+    private int externalSortCost(int numpages, int numbuff) {
+        int numpasses = 1 + (int) Math.ceil(Math.log(Math.ceil(numpages / (1.0 * numbuff))) / Math.log(numpages -1) );
+        return numpasses * (2 * numpages);
     }
 
     /**

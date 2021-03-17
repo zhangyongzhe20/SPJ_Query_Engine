@@ -32,14 +32,10 @@ public class Operator {
     }
 
     public boolean open() {
-        System.err.println("Abstract interface cannot be used.");
-        System.exit(1);
         return true;
     }
 
     public Batch next() {
-        System.err.println("Abstract interface cannot be used.");
-        System.exit(1);
         return null;
     }
 
@@ -48,6 +44,7 @@ public class Operator {
     }
 
     public Object clone() {
+        System.out.println("CLONING");
         return new Operator(optype);
     }
 
