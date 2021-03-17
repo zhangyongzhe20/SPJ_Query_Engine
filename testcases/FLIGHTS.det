@@ -1,0 +1,9 @@
+6
+11000
+flno INTEGER 11000 PK 4
+from STRING 10 NK 20
+to STRING 10 NK 20
+distance 100 INTEGER NK 4
+departs 1140 INTEGER NK 4
+arrives 1140 INTEGER NK 4
+cruisingrange INTEGER 10 NK 4
