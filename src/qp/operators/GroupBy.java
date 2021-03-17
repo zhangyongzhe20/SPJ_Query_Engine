@@ -16,7 +16,7 @@ public class GroupBy extends Operator {
     private boolean eos = false;                // records whether we have reached end of stream
 
     private ArrayList<Integer> projectIndices = new ArrayList<>();  // Set of index of the attributes in the base operator that are to be projected
-    private Sort sortedBase;            // the sort operator being applied on the base operator
+    private Distinct sortedBase;            // the sort operator being applied on the base operator
     private boolean isAsc;
     private boolean isDesc;
 
@@ -60,7 +60,7 @@ public class GroupBy extends Operator {
         for (Object attribute : this.groupbyList) {
             projectIndices.add(schema.indexOf( (Attribute) attribute));
         }
-        sortedBase = new Sort(base, isAsc, isDesc, groupbyList, OpType.DISTINCT, 7);
+        sortedBase = new Distinct(base, isAsc, isDesc, groupbyList, OpType.DISTINCT, 7);
         sortedBase.setSchema(schema);
         if (!sortedBase.open()) {
             System.out.println("External sort failed to open");
