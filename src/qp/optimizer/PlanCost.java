@@ -92,6 +92,26 @@ public class PlanCost {
         return calculateCost(node.getBase());
     }
 
+    protected long getStatistics(GroupBy node) {
+        return getSort(node.getBase());
+    }
+
+    protected long getSort(Operator node) {
+        long numOfInTuples = calculateCost(node);
+        int inCapacity = Batch.getPageSize() / node.getSchema().getTupleSize();
+        int numOfInPages = (int) Math.ceil(1.0 * numOfInTuples / inCapacity);
+        int numOfBuffer = BufferManager.getBuffersPerJoin();
+
+        cost += getExternalSortCost(numOfInPages, numOfBuffer);
+        return numOfInTuples;
+    }
+
+    private long getExternalSortCost(long numOfPages, int numOfBuffer) {
+        int numOfSortedRuns = (int) Math.ceil(1.0 * numOfPages / numOfBuffer);
+        int numOfPasses = (int) Math.ceil(Math.log(numOfSortedRuns) / Math.log(numOfBuffer - 1)) + 1;
+        return 2 * numOfPages * numOfPasses;
+    }
+
     protected long getStatistics(Sort node) {
         // TODO: use stats file for given table to calculate cost
         return calculateCost(node.getBase());

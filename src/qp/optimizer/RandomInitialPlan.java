@@ -80,12 +80,10 @@ public class RandomInitialPlan {
         } else if (!sqlquery.isDistinct() && orderbylist.size() == 0 && grouplistsize>0) {
             // do nothing
             createGroupbyOp();
-            createDistinctOp();
             System.out.println("Case3: No distinct or effective orderby detected");
         } else if (!sqlquery.isDistinct() && orderbylist.size() > 0 && grouplistsize>0) {
             createGroupbyOp();
             createSortOp();
-            createDistinctOp();
             System.out.println("Case4: No distinct but have effective orderby");
         } else if(sqlquery.isDistinct() && orderbylist.size() == 0 && grouplistsize==0) {
             // repopulate orderbylist using root attrs
