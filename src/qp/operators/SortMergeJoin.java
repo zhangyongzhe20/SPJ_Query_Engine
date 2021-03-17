@@ -108,7 +108,7 @@ public class SortMergeJoin extends Join {
     private Batch nextThrows() throws IOException, ClassNotFoundException {
         Batch joinResult = new Batch(batchSize);
         Tuple leftTuple, rightTuple;
-           while(!eosLeft && !eosRight)
+           while(!joinResult.isFull() && !eosLeft && !eosRight)
            {
                leftTuple = readNextLeftTuple();
                rightTuple = readNextRightTuple();
