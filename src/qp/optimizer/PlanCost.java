@@ -113,8 +113,15 @@ public class PlanCost {
     }
 
     protected long getStatistics(Sort node) {
-        // TODO: use stats file for given table to calculate cost
-        return calculateCost(node.getBase());
+        long outtuples = calculateCost(node.getBase());
+        Schema baseschema = node.getBase().getSchema();
+        long basetuplesize = baseschema.getTupleSize();
+        long basecapacity = Math.max(1, Batch.getPageSize() / basetuplesize);
+        long basepages = (long) Math.ceil(((double) outtuples) / (double) basecapacity);
+        double sortBaseCost = 2 * basepages * (1 + Math.ceil(Math.log(Math.ceil((double)(basepages / node.getNumBuff()))) / Math.log(node.getNumBuff() - 1)));
+        sortBaseCost = Math.max(sortBaseCost, 2 * basepages * (1));
+        cost = cost + (long) sortBaseCost;
+        return outtuples;
     }
 
     /**

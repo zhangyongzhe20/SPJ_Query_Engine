@@ -120,15 +120,14 @@ public class RandomInitialPlan {
 
     public void createDistinctOp() {
         ArrayList<Attribute> finalAttrs = root.getSchema().getAttList();
-        Distinct d = new Distinct(root, sqlquery.isAsc(), sqlquery.isDesc(), finalAttrs, OpType.DISTINCT, 7);
+        Distinct d = new Distinct(root, sqlquery.isAsc(), sqlquery.isDesc(), finalAttrs, OpType.DISTINCT, BufferManager.getBuffersPerJoin());
         Schema newSchema2 = root.getSchema();
         d.setSchema(newSchema2);
         root = d;
     }
 
     public void createSortOp() {
-        // TODO buffer issue
-        Sort op1 = new Sort(root, sqlquery.isAsc(), sqlquery.isDesc(), orderbylist, OpType.SORT, 7);
+        Sort op1 = new Sort(root, sqlquery.isAsc(), sqlquery.isDesc(), orderbylist, OpType.SORT, BufferManager.getBuffers());
         op1.setSchema(root.getSchema());
         root = op1;
     }
