@@ -42,6 +42,10 @@ public class Sort extends Operator {
         this.base = base;
     }
 
+    public int getNumBuff() {
+        return numBuff;
+    }
+
     /**
      * Open file prepare a stream pointer to read input file
      */
