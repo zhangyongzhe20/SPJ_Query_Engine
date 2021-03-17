@@ -17,6 +17,7 @@ public class Join extends Operator {
     int numBuff;                         // Number of buffers available
     int jointype;                        // JoinType.NestedJoin/SortMerge/HashJoin
     int nodeIndex;                       // Each join node is given a number
+    Condition con;     //join condition
 
     public Join(Operator left, Operator right, int type) {
         super(type);
@@ -31,6 +32,7 @@ public class Join extends Operator {
         this.right = right;
         conditionList = new ArrayList<>();
         conditionList.add(condition);
+        this.con = condition;
     }
 
     public Join(Operator left, Operator right, ArrayList<Condition> conditionList, int type) {
