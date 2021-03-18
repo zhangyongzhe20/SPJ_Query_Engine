@@ -157,11 +157,12 @@ public class SortMergeJoin extends Join {
         int batchIndex = leftTupleIdx / leftBatchSize;
         int tupleIdxInBatch = leftTupleIdx % leftBatchSize;
         // check whether it reaches the end of stream
-        if(readLeftBatch(batchIndex).size() == 0){
+        Batch curBatch = readLeftBatch(batchIndex);
+        if(curBatch.size() == 0 || curBatch.size() == tupleIdxInBatch){
             eosLeft = true;
             return null;
         }
-        return readLeftBatch(batchIndex).get(tupleIdxInBatch);
+        return curBatch.get(tupleIdxInBatch);
     }
 
     /**
@@ -172,11 +173,12 @@ public class SortMergeJoin extends Join {
         int batchIndex = rightTupleIdx / rightBatchSize;
         int tupleIdxInBatch = rightTupleIdx % rightBatchSize;
         // check whether it reaches the end of stream
-        if(readRightBatch(batchIndex).size() == 0){
+        Batch curBatch = readRightBatch(batchIndex);
+        if(curBatch.size() == 0 || curBatch.size() == tupleIdxInBatch){
             eosRight = true;
             return null;
         }
-        return readRightBatch(batchIndex).get(tupleIdxInBatch);
+        return curBatch.get(tupleIdxInBatch);
     }
 
 
