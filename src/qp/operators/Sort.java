@@ -59,7 +59,7 @@ public class Sort extends Operator {
         int tupleSize = base.getSchema().getTupleSize();
         batchSize = Batch.getPageSize() / tupleSize;
 
-        this.schema = base.getSchema(); // TODO or should it be this.getSchema()?
+        this.schema = base.getSchema();
 
         ArrayList<String> filenames = generateSortedRuns();
 
@@ -262,7 +262,6 @@ public class Sort extends Operator {
      * * is already reached
      **/
     public boolean close() {
-        // TODO
         File f = new File(completeFile);
         f.delete();
         return true;

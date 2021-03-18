@@ -150,7 +150,6 @@ public class PlanCost {
          ** buffer capacity, i.e., number of tuples per page **/
         long tuplesize = node.getSchema().getTupleSize();
         long outcapacity = Math.max(1, Batch.getPageSize() / tuplesize);
-        //todo, leftschema is null
         long leftuplesize = leftschema.getTupleSize();
         long leftcapacity = Math.max(1, Batch.getPageSize() / leftuplesize);
         long righttuplesize = rightschema.getTupleSize();

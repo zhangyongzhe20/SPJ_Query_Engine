@@ -136,7 +136,6 @@ public class SortMergeJoin extends Join {
             if(comparison == 0){
                 joinResult.add(leftTuple.joinWith(rightTuple));
                 rightTupleIdx++;
-                //todo not same as pesudo code
                 rightTuple = readNextRightTuple();
             }
             else{
