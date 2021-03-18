@@ -114,7 +114,7 @@ public class SortMergeJoin extends Join {
                rightTuple = readNextRightTuple();
                int comparison = Tuple.compareTuples(leftTuple, rightTuple, leftAttrIdx, rightAttrIdx);
             if(markerIndex == -1){
-                while(comparison < 0){
+                while(comparison < 0) {
                     leftTupleIdx++;
                     leftTuple = readNextLeftTuple();
                     if(leftTuple == null){

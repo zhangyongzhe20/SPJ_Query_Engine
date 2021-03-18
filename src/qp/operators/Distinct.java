@@ -55,7 +55,6 @@ public class Distinct extends Operator {
 
     @Override
     public boolean open() {
-        System.out.println("DISTINCT CALLED OPEN");
         isEOS = false;
         start = 0;
         prev = null;
@@ -78,7 +77,6 @@ public class Distinct extends Operator {
     }
     @Override
     public Batch next() {
-        System.out.println("DISTINCT CALLED NEXT");
         int i;
         if (isEOS) {
             base.close();
@@ -102,15 +100,12 @@ public class Distinct extends Operator {
                 }
             }
 
-            // Keep reading in tuples and then compare to predecessor to check for uniqueness
+            // Read in sorted tuples and then check for duplicates
             for (i = start; i < incomingBatch.size() && (!outgoingBatch.isFull()); i++) {
                 Tuple present = incomingBatch.get(i);
 
-                System.out.println(sortOn);
-                System.out.println(sortOnIndexList);
 
                 boolean t = prev == null || Tuple.compareTuples(prev, present, sortOnIndexList, sortOnIndexList) != 0;
-                System.out.println(t);
                 // If this is the first tuple read from the sorted batch/different from the last unique tuple present
                 if (t) {
                     outgoingBatch.add(present);

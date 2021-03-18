@@ -52,8 +52,6 @@ public class GroupBy extends Operator {
 
     @Override
     public boolean open() {
-        System.out.println("GROUPBY CALLED OPEN");
-        System.out.println("GROUPBY:"+sortOn.size());
         isEOS = false;
         start = 0;
         prev = null;
@@ -69,14 +67,12 @@ public class GroupBy extends Operator {
         }
 
         if(!base.open()) {
-            System.out.println("Cannot open base from GROUPBY");
             System.exit(1);
         }
         return true;
     }
     @Override
     public Batch next() {
-        System.out.println("GROUPBY CALLED NEXT");
         int i;
         if (isEOS) {
             base.close();
@@ -91,8 +87,6 @@ public class GroupBy extends Operator {
                 incomingBatch = base.next();
 
                 if(incomingBatch != null) {
-                    System.out.println("Incoming batch");
-                    Debug.PPrint(incomingBatch);
                 }
 
                 if (incomingBatch == null) {
