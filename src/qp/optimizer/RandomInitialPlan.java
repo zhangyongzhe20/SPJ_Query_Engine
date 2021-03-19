@@ -125,7 +125,6 @@ public class RandomInitialPlan {
                 _if.close();
             } catch (Exception e) {
                 System.err.println("RandomInitialPlan:Error reading Schema of the table " + filename);
-                System.err.println(e);
                 System.exit(1);
             }
             tab_op_hash.put(tabname, op1);
