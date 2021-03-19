@@ -122,7 +122,7 @@ public class RandomInitialPlan {
      * Creates a groupby operator.
      */
     private void createGroupbyOp() {
-        GroupBy operator = new GroupBy(root, sqlquery.isAsc(), sqlquery.isDesc(), sqlquery.getGroupByList(), OpType.GROUPBY, BufferManager.getBuffers());
+        GroupBy operator = new GroupBy(root, sqlquery.isAsc(), sqlquery.isDesc(), groupbylist, OpType.GROUPBY, BufferManager.getBuffers());
         operator.setSchema(root.getSchema());
         root = operator;
     }
