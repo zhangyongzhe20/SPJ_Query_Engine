@@ -52,6 +52,7 @@ public class Sort extends Operator {
     public boolean open() {
 
         if(!base.open()) {
+            System.out.println("Error in base.open() in sort");
             System.exit(3);
         }
 
