@@ -21,9 +21,9 @@ public class SortMergeJoin extends Join {
     // used for file read/write
     private int leftBatchIdx = -1;
     private Batch leftBatch;
-    private int rightRunningBufferIdx = -1;
-    private Batch rightRunningBuffer;
-    private int rightBufferIdx = 0;
+    private int rCurBufferIdx = -1;
+    private Batch rCurBuffer;
+    private int rBufferIdx = 0;
     // size is buffer - 3
     private int rightBufferSize;
     private List<Batch> rightBuffer = new LinkedList<>();
@@ -75,14 +75,14 @@ public class SortMergeJoin extends Join {
         }
         try {
             // store sorted intermediate data into disk
-            leftFiles = writeOperatorToFile(leftSort, "SMJ-Left");
-            rightFiles = writeOperatorToFile(rightSort, "SMJ-Right");
+            leftFiles = writeOprToFile(leftSort, "SMJ-Left");
+            rightFiles = writeOprToFile(rightSort, "SMJ-Right");
 
             leftSort.close();
             rightSort.close();
             // init buffer size
             rightBufferSize = getNumBuff() - 3;
-            initializeRightBuffer();
+            initRBuffer();
         } catch (Exception e) {
             System.out.println("Pokemon gotta catch 'em all");
             e.printStackTrace();
@@ -172,7 +172,7 @@ public class SortMergeJoin extends Join {
         int batchIndex = rightTupleIdx / rightBatchSize;
         int tupleIdxInBatch = rightTupleIdx % rightBatchSize;
         // check whether it reaches the end of stream
-        Batch curBatch = readRightBatch(batchIndex);
+        Batch curBatch = readRBatch(batchIndex);
         if(curBatch.size() == 0 || curBatch.size() == tupleIdxInBatch){
             eosRight = true;
             return null;
@@ -201,19 +201,6 @@ public class SortMergeJoin extends Join {
     }
 
     //  helper functions of file read/write in the below....
-    private void initializeRightBuffer() throws IOException, ClassNotFoundException {
-        rightBufferIdx = 0;
-        rightBuffer.clear();
-        for (int i = 0; i < rightBufferSize; i++) {
-            if (i >= rightFiles.size()) {
-                break;
-            }
-
-            Batch batch = readBatchFromFile(rightFiles.get(i));
-            rightBuffer.add(batch);
-        }
-    }
-
     private Batch readLeftBatch(int idx) throws IOException, ClassNotFoundException, IndexOutOfBoundsException {
         if (idx == leftBatchIdx) {
             return leftBatch;
@@ -224,45 +211,57 @@ public class SortMergeJoin extends Join {
         return leftBatch;
     }
 
-    private Batch readRightBatch(int idx) throws IOException, ClassNotFoundException {
-        if (isInRightBuffer(idx)) {
+    private Batch readRBatch(int idx) throws IOException, ClassNotFoundException {
+        if (isInRBuffer(idx)) {
             return readFromBuffer(idx);
         }
-        if (idx < rightBufferIdx || rightBufferSize == 0) {
-            return readToRunningBuffer(idx);
+        if (idx < rBufferIdx || rightBufferSize == 0) {
+            return readToCurBuffer(idx);
         }
-        while (!isInRightBuffer(idx)) {
+        while (!isInRBuffer(idx)) {
             advanceBuffer();
         }
         return readFromBuffer(idx);
     }
 
-    private void advanceBuffer() throws IOException, ClassNotFoundException {
-        int nextRightBatchToRead = rightBufferIdx + rightBufferSize;
-        rightBuffer.remove(0);
-        Batch batch = readBatchFromFile(rightFiles.get(nextRightBatchToRead));
-        rightBuffer.add(batch);
-        rightBufferIdx++;
+    private void initRBuffer() throws IOException, ClassNotFoundException {
+        rBufferIdx = 0;
+        rightBuffer.clear();
+        for (int i = 0; i < rightBufferSize; i++) {
+            if (i >= rightFiles.size()) {
+                break;
+            }
+            Batch batch = readBatchFromFile(rightFiles.get(i));
+            rightBuffer.add(batch);
+        }
     }
 
-    private Batch readToRunningBuffer(int idx) throws IOException, ClassNotFoundException {
-        if (rightRunningBufferIdx == idx) {
-            return rightRunningBuffer;
+    private void advanceBuffer() throws IOException, ClassNotFoundException {
+        int nextRBatchToRead = rBufferIdx + rightBufferSize;
+        rightBuffer.remove(0);
+        Batch batch = readBatchFromFile(rightFiles.get(nextRBatchToRead));
+        rightBuffer.add(batch);
+        rBufferIdx++;
+    }
+
+    private Batch readToCurBuffer(int idx) throws IOException, ClassNotFoundException {
+        if (rCurBufferIdx == idx) {
+            return rCurBuffer;
         }
-        rightRunningBuffer = readBatchFromFile(rightFiles.get(idx));
-        rightRunningBufferIdx = idx;
-        return rightRunningBuffer;
+        rCurBuffer = readBatchFromFile(rightFiles.get(idx));
+        rCurBufferIdx = idx;
+        return rCurBuffer;
     }
 
     private Batch readFromBuffer(int idx) {
-        return rightBuffer.get(idx - rightBufferIdx);
+        return rightBuffer.get(idx - rBufferIdx);
     }
 
-    private boolean isInRightBuffer(int idx) {
-        return (rightBufferIdx <= idx) && (idx < rightBufferIdx + rightBufferSize);
+    private boolean isInRBuffer(int idx) {
+        return (rBufferIdx <= idx) && (idx < rBufferIdx + rightBufferSize);
     }
 
-    private List<File> writeOperatorToFile(Operator operator, String prefix) throws IOException {
+    private List<File> writeOprToFile(Operator operator, String prefix) throws IOException {
         Batch batch;
         int count = 0;
         List<File> files = new ArrayList<>();
