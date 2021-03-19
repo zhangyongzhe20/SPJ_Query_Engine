@@ -4,6 +4,7 @@
  **/
 
 import qp.operators.Debug;
+import qp.operators.JoinType;
 import qp.operators.Operator;
 import qp.optimizer.BufferManager;
 import qp.optimizer.PlanCost;
@@ -21,16 +22,28 @@ public class QueryMain {
 
     public static void main(String[] args) {
         if (args.length < 2) {
-            System.out.println("usage: java QueryMain <queryfilename> <resultfile> <pagesize> <numbuffer>");
+            System.out.println("usage: java QueryMain <queryfilename> <resultfile> <pagesize> <numbuffer> <hasSMJ>");
             System.exit(1);
+        }
+
+        if (args.length > 4) {
+            try {
+                JoinType.hasSMJ = Integer.parseInt(args[args.length - 1]);
+            } catch (NumberFormatException e) {
+                System.out.println("<hasSMJ> parameter must integer 0 or 1 only");
+                System.exit(1);
+            }
+
+            if (!(JoinType.hasSMJ == 1 || JoinType.hasSMJ == 0)) {
+                System.out.println("<hasSMJ> parameter must integer 0 or 1 only");
+                System.exit(1);
+            }
         }
 
         BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
         Batch.setPageSize(getPageSize(args, in));
 
         SQLQuery sqlquery = getSQLQuery(args[0]);
-        System.out.println("isDesc: " + sqlquery.isDesc());
-        System.out.println("isAsc: " + sqlquery.isAsc());
         configureBufferManager(sqlquery.getNumJoin(), args, in);
 
         Operator root = getQueryPlan(sqlquery);
