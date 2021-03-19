@@ -65,13 +65,11 @@ public class Distinct extends Operator {
 
         this.sortOnIndexList = new ArrayList<>();
         for(Attribute a : sortOn) {
-            if (schema == null) System.out.println("SCHEMA NULL");
             int index = schema.indexOf(a);
             sortOnIndexList.add(index);
         }
 
         if(!base.open()) {
-            System.out.println("Cannot open base from distinct");
             System.exit(1);
         }
         return true;
@@ -108,7 +106,6 @@ public class Distinct extends Operator {
 
 
                 boolean t = prev == null || Tuple.compareTuples(prev, present, sortOnIndexList, sortOnIndexList) != 0;
-                System.out.println(t);
                 // If this is the first tuple read from the sorted batch/different from the last unique tuple present
                 if (t) {
                     outgoingBatch.add(present);
