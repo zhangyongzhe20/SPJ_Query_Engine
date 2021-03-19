@@ -87,6 +87,7 @@ public class SortMergeJoin extends Join {
             rightBufferSize = getNumBuff() - 3;
             initRBuffer();
         } catch (Exception e) {
+            System.out.println("Pokemon gotta catch 'em all");
             e.printStackTrace();
             return false;
         }

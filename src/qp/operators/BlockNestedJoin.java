@@ -86,6 +86,7 @@ public class BlockNestedJoin extends Join {
                 }
                 out.close();
             } catch (IOException io) {
+                System.out.println("NestedJoin: Error writing to temporary file");
                 return false;
             }
             if (!right.close())

@@ -70,6 +70,7 @@ public class Distinct extends Operator {
         }
 
         if(!base.open()) {
+            System.out.println("Cannot open base from distinct");
             System.exit(1);
         }
         return true;
