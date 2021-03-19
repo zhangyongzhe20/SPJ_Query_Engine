@@ -8,6 +8,9 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+
+import static qp.operators.FileAccess.*;
+
 public class SortMergeJoin extends Join {
     //delete temp files of from external sort
     private static boolean CLEAN_FILES = true;
@@ -75,8 +78,8 @@ public class SortMergeJoin extends Join {
         }
         try {
             // store sorted intermediate data into disk
-            leftFiles = writeOprToFile(leftSort, "SMJ-Left");
-            rightFiles = writeOprToFile(rightSort, "SMJ-Right");
+            leftFiles = writeOprToFile(leftSort, "L-SMJ");
+            rightFiles = writeOprToFile(rightSort, "R-SMJ");
 
             leftSort.close();
             rightSort.close();
@@ -156,7 +159,7 @@ public class SortMergeJoin extends Join {
         int batchIndex = leftTupleIdx / leftBatchSize;
         int tupleIdxInBatch = leftTupleIdx % leftBatchSize;
         // check whether it reaches the end of stream
-        Batch curBatch = readLeftBatch(batchIndex);
+        Batch curBatch = readLBatch(batchIndex);
         if(curBatch.size() == 0 || curBatch.size() == tupleIdxInBatch){
             eosLeft = true;
             return null;
@@ -183,11 +186,11 @@ public class SortMergeJoin extends Join {
 
     @Override
     public boolean close() {
-        if(rightBuffer!=null) {
-            rightBuffer.clear();
-        }
         if(leftBatch !=null) {
             leftBatch.clear();
+        }
+        if(rightBuffer!=null) {
+            rightBuffer.clear();
         }
         if (CLEAN_FILES) {
             for (File file: leftFiles) {
@@ -201,7 +204,7 @@ public class SortMergeJoin extends Join {
     }
 
     //  helper functions of file read/write in the below....
-    private Batch readLeftBatch(int idx) throws IOException, ClassNotFoundException, IndexOutOfBoundsException {
+    private Batch readLBatch(int idx) throws IOException, ClassNotFoundException, IndexOutOfBoundsException {
         if (idx == leftBatchIdx) {
             return leftBatch;
         }
@@ -216,10 +219,20 @@ public class SortMergeJoin extends Join {
             return readFromBuffer(idx);
         }
         if (idx < rBufferIdx || rightBufferSize == 0) {
-            return readToCurBuffer(idx);
+            if (rCurBufferIdx == idx) {
+                return rCurBuffer;
+            }
+            rCurBuffer = readBatchFromFile(rightFiles.get(idx));
+            rCurBufferIdx = idx;
+            return rCurBuffer;
         }
         while (!isInRBuffer(idx)) {
-            advanceBuffer();
+            // move buffer
+            int nextRBatchToRead = rBufferIdx + rightBufferSize;
+            rightBuffer.remove(0);
+            Batch batch = readBatchFromFile(rightFiles.get(nextRBatchToRead));
+            rightBuffer.add(batch);
+            rBufferIdx++;
         }
         return readFromBuffer(idx);
     }
@@ -236,51 +249,11 @@ public class SortMergeJoin extends Join {
         }
     }
 
-    private void advanceBuffer() throws IOException, ClassNotFoundException {
-        int nextRBatchToRead = rBufferIdx + rightBufferSize;
-        rightBuffer.remove(0);
-        Batch batch = readBatchFromFile(rightFiles.get(nextRBatchToRead));
-        rightBuffer.add(batch);
-        rBufferIdx++;
-    }
-
-    private Batch readToCurBuffer(int idx) throws IOException, ClassNotFoundException {
-        if (rCurBufferIdx == idx) {
-            return rCurBuffer;
-        }
-        rCurBuffer = readBatchFromFile(rightFiles.get(idx));
-        rCurBufferIdx = idx;
-        return rCurBuffer;
-    }
-
     private Batch readFromBuffer(int idx) {
         return rightBuffer.get(idx - rBufferIdx);
     }
 
     private boolean isInRBuffer(int idx) {
         return (rBufferIdx <= idx) && (idx < rBufferIdx + rightBufferSize);
-    }
-
-    private List<File> writeOprToFile(Operator operator, String prefix) throws IOException {
-        Batch batch;
-        int count = 0;
-        List<File> files = new ArrayList<>();
-        while ((batch = operator.next()) != null) {
-            File file = new File(prefix + "-" + count);
-            count += 1;
-            writeBatchToFile(batch, file);
-            files.add(file);
-        }
-        return files;
-    }
-
-    private void writeBatchToFile(Batch batch, File file) throws IOException {
-        ObjectOutputStream objectOutputStream = new ObjectOutputStream(new FileOutputStream(file));
-        objectOutputStream.writeObject(batch);
-
-    }
-    private Batch readBatchFromFile(File file) throws IOException, ClassNotFoundException {
-        ObjectInputStream objectInputStream = new ObjectInputStream(new FileInputStream(file));
-        return (Batch) objectInputStream.readObject();
     }
 }
