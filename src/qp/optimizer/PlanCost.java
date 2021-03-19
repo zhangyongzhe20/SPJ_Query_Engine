@@ -176,8 +176,8 @@ public class PlanCost {
                 break;
             case JoinType.SORTMERGE:
                 // cost of sorting left and right page
-                double sortLeftCost = 2 * leftpages * (1 + Math.ceil(Math.log(Math.ceil((double)(leftpages / numbuff))) / Math.log(numbuff - 1)));
-                double sortRightCost = 2 * rightpages * (1 + Math.ceil(Math.log(Math.ceil((double)(rightpages / numbuff))) / Math.log(numbuff - 1)));
+                int sortLeftCost = externalSortCost((int) leftpages, (int) numbuff);
+                int sortRightCost = externalSortCost((int) rightpages, (int) numbuff);
                 // cost of merge join
                 double mergeLeftRight = leftpages + rightpages;
                 // total cost
@@ -191,7 +191,9 @@ public class PlanCost {
 
         return outtuples;
     }
-
+    private int externalSortCost(int numpages, int numbuff) {
+        return (2 * numpages) * (1 + (int) Math.ceil(Math.log(Math.ceil(numpages / (1.0 * numbuff))) / Math.log(numpages -1)));
+    }
     /**
      * Find number of incoming tuples, Using the selectivity find # of output tuples
      * * And statistics about the attributes

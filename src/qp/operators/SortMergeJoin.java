@@ -1,194 +1,259 @@
 package qp.operators;
+
 import qp.utils.Attribute;
 import qp.utils.Batch;
-import qp.utils.Condition;
 import qp.utils.Tuple;
 
 import java.io.*;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
-public class SortMergeJoin extends Join{
+import static qp.operators.FileAccess.*;
+
+public class SortMergeJoin extends Join {
+    //delete temp files of from external sort
+    private static boolean CLEAN_FILES = true;
+
+    // the index of join attribute of left/right tuple
+    private int leftAttrIdx;
+    private int rightAttrIdx;
+    // outBatch size
+    private int batchSize;
+
+    // used for file read/write
+    private int leftBatchIdx = -1;
     private Batch leftBatch;
-    private Batch rightBatch;
-    // index of left buffer
-    private int leftBatchIndex = 0;
-    // index of right buffer
-    private int rightBatchIndex = 0;
-    private Tuple leftTuple = null;
-    private Tuple rightTuple = null;
-    // the index of join attribute of left tuple
-    private int leftTupleIndex = 0;
-    // the index of join attribute of right tuple
-    private int rightTupleIndex = 0;
-    // the data type of the join attribute
-    private int joinAttrType;
+    private int rCurBufferIdx = -1;
+    private Batch rCurBuffer;
+    private int rBufferIdx = 0;
+    // size is buffer - 3
+    private int rightBufferSize;
+    private List<Batch> rightBuffer = new LinkedList<>();
+    private List<File> leftFiles;
+    private List<File> rightFiles;
+
+    //used in the next() of sort merge join
+    private int leftTupleIdx = 0;
+    private int rightTupleIdx = 0;
     // marker, used to backtrack when left batch has duplicate join values
     private int markerIndex = -1;
     // end of left stream
     private boolean eosLeft = false;
     // end of right stream
     private boolean eosRight = false;
-    // others
-    private int batchSize;
 
+    // the buffer size of left and right batch
+    int rightBatchSize;
+    int leftBatchSize;
 
-    /**
-     * Constructor of sort-merge join based on block nest loop join
-     * @param basejn
-     */
-    public SortMergeJoin(Join basejn) {
-        super(basejn.getLeft(), basejn.getRight(), basejn.getCondition(), basejn.getOpType());
-        //TODO others
-        schema = basejn.getSchema();
-        jointype = basejn.getJoinType();
-        numBuff = basejn.getNumBuff();
+    public SortMergeJoin(Join join) {
+        super(join.getLeft(), join.getRight(), join.getCondition(), join.getOpType());
+        schema = join.getSchema();
+        jointype = join.getJoinType();
+        numBuff = join.getNumBuff();
     }
 
-    /**
-     *
-     * @return true if the operator open successfully
-     */
     @Override
-    public boolean open(){
-        left.open();
-        right.open();
+    public boolean open() {
         //calculate the batch size
         batchSize = Batch.getPageSize() / schema.getTupleSize();
-        // get the leftIndex and rightIndex; TODO: only implemented one condition
-        leftTupleIndex = left.getSchema().indexOf(getCondition().getLhs());
-        rightTupleIndex = right.getSchema().indexOf((Attribute) getCondition().getRhs());
-        // get the join attribute; TODO: only implemented one condition
-        joinAttrType = left.getSchema().typeOf(conditionList.get(0).getLhs());
-        return super.open();
-    }
 
+        // get the leftIndex and rightIndex;
+        Attribute leftAttr = getCondition().getLhs();
+        Attribute rightAttr = (Attribute) getCondition().getRhs();
+        leftAttrIdx = left.getSchema().indexOf(leftAttr);
+        rightAttrIdx = right.getSchema().indexOf(rightAttr);
+
+        // joinAttrType = left.getSchema().typeOf(conditionList.get(0).getLhs());
+        //left attributes
+        ArrayList<Attribute> leftAttrs = new ArrayList<>();
+        ArrayList<Attribute> rightAttrs = new ArrayList<>();
+        leftAttrs.add(leftAttr);
+        rightAttrs.add(rightAttr);
+        Sort leftSort = new Sort(left, true, false, leftAttrs, OpType.SORT, 3);
+        Sort rightSort = new Sort(right, true, false, rightAttrs, OpType.SORT, 10);
+        if (!(leftSort.open() && rightSort.open())) {
+            return false;
+        }
+        try {
+            // store sorted intermediate data into disk
+            leftFiles = writeOprToFile(leftSort, "L-SMJ");
+            rightFiles = writeOprToFile(rightSort, "R-SMJ");
+
+            leftSort.close();
+            rightSort.close();
+            // init buffer size
+            rightBufferSize = getNumBuff() - 3;
+            initRBuffer();
+        } catch (Exception e) {
+            System.out.println("Pokemon gotta catch 'em all");
+            e.printStackTrace();
+            return false;
+        }
+        int tupleSize = getRight().getSchema().getTupleSize();
+        rightBatchSize = Batch.getPageSize() / tupleSize;
+        tupleSize = getLeft().getSchema().getTupleSize();
+        leftBatchSize = Batch.getPageSize() / tupleSize;
+        return true;
+    }
     @Override
-    public Batch next(){
-        Batch output = new Batch(batchSize);
-        //initial left and right tuple with index = 0
-        leftTuple = readNextLeftTuple();
-        rightTuple = readNextRightTuple();
-        while(!output.isFull() && !eosLeft && !eosRight){
-            int comparsion = compareLeftRightTuple(leftTuple, rightTuple, leftTupleIndex, rightTupleIndex);
-            // no marker at the beginning
-            if(markerIndex == -1) {
-                while (comparsion < 0) {
+    public Batch next() {
+        try {
+            return nextThrows();
+        } catch (IOException | ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
+    /**
+     * Produces 1 batch of output
+     */
+    private Batch nextThrows() throws IOException, ClassNotFoundException {
+        Batch joinResult = new Batch(batchSize);
+        Tuple leftTuple, rightTuple;
+        while(!joinResult.isFull() && !eosLeft && !eosRight)
+        {
+            leftTuple = readNextLeftTuple();
+            rightTuple = readNextRightTuple();
+            int comparison = Tuple.compareTuples(leftTuple, rightTuple, leftAttrIdx, rightAttrIdx);
+            if(markerIndex == -1){
+                while(comparison < 0) {
+                    leftTupleIdx++;
                     leftTuple = readNextLeftTuple();
-                    comparsion = compareLeftRightTuple(leftTuple, rightTuple, leftTupleIndex, rightTupleIndex);
+                    if(leftTuple == null){
+                        return joinResult.isEmpty() ? null : joinResult;
+                    }
+                    comparison = Tuple.compareTuples(leftTuple, rightTuple, leftAttrIdx, rightAttrIdx);
                 }
-                while (comparsion > 0) {
+                while(comparison > 0){
+                    rightTupleIdx++;
                     rightTuple = readNextRightTuple();
-                    comparsion = compareLeftRightTuple(leftTuple, rightTuple, leftTupleIndex, rightTupleIndex);
+                    if(rightTuple == null){
+                        return joinResult.isEmpty() ? null : joinResult;
+                    }
+                    comparison = Tuple.compareTuples(leftTuple, rightTuple, leftAttrIdx, rightAttrIdx);
                 }
-                // need to reverse one
-                markerIndex = rightBatchIndex - 1;
+
+                markerIndex = rightTupleIdx;
             }
-            if(comparsion == 0){
-             //join left and right, then insert to output
-             output.add(leftTuple.joinWith(rightTuple));
-             rightTuple = readNextRightTuple();
-            }else{
-                rightBatchIndex = markerIndex;
+            if(comparison == 0){
+                joinResult.add(leftTuple.joinWith(rightTuple));
+                rightTupleIdx++;
+                rightTuple = readNextRightTuple();
+            }
+            else{
+                rightTupleIdx = markerIndex;
+                leftTupleIdx++;
                 leftTuple = readNextLeftTuple();
                 markerIndex = -1;
             }
         }
-        return output;
+        return joinResult.isEmpty() ? null : joinResult;  // return null to signify end of result
     }
-
-    /**
-     *
-     * @return true if operator closed sucessfully
-     */
-    @Override
-    public boolean close(){
-        left.close();
-        right.close();
-        return super.close();
-    }
-
-
 
     /**
      * read next left tuple from left batch
      * @return next left tuple
      */
-    private Tuple readNextLeftTuple() {
-        if(leftBatch == null || left.next() == null){
+    private Tuple readNextLeftTuple() throws IOException, ClassNotFoundException, IndexOutOfBoundsException {
+        int batchIndex = leftTupleIdx / leftBatchSize;
+        int tupleIdxInBatch = leftTupleIdx % leftBatchSize;
+        // check whether it reaches the end of stream
+        Batch curBatch = readLBatch(batchIndex);
+        if(curBatch.size() == 0 || curBatch.size() == tupleIdxInBatch){
             eosLeft = true;
             return null;
         }
-        // if current left batch index reach the end, fetch new batch
-        if(leftBatchIndex == leftBatch.size()){
-            leftBatch = left.next();
-            leftBatchIndex = 0;
-        }
-
-        return leftBatch.get(leftBatchIndex++);
+        return curBatch.get(tupleIdxInBatch);
     }
 
     /**
      * read next right tuple from right batch
      * @return next right tuple
      */
-    private Tuple readNextRightTuple() {
-        if(rightBatch == null || right.next() == null){
+    private Tuple readNextRightTuple() throws IOException, ClassNotFoundException {
+        int batchIndex = rightTupleIdx / rightBatchSize;
+        int tupleIdxInBatch = rightTupleIdx % rightBatchSize;
+        // check whether it reaches the end of stream
+        Batch curBatch = readRBatch(batchIndex);
+        if(curBatch.size() == 0 || curBatch.size() == tupleIdxInBatch){
             eosRight = true;
             return null;
         }
-        // if current right batch index reach the end, fetch new batch
-        if(rightBatchIndex == rightBatch.size()){
-            rightBatch = right.next();
-            rightBatchIndex = 0;
-        }
-
-        return rightBatch.get(rightBatchIndex++);
-    }
-
-    /**
-     * compare the join attribute of left and right tuple
-     * @param left
-     * @param right
-     * @param leftIndex
-     * @param rightIndex
-     * @return
-     */
-    private int compareLeftRightTuple(Tuple left, Tuple right, int leftIndex, int rightIndex){
-        Object leftValue = left.dataAt(leftIndex);
-        Object rightValue = right.dataAt(rightIndex);
-
-        switch (joinAttrType) {
-            case Attribute.INT:
-                return Integer.compare((int) leftValue, (int) rightValue);
-            case Attribute.STRING:
-                return ((String) leftValue).compareTo((String) rightValue);
-            case Attribute.REAL:
-                return Float.compare((float) leftValue, (float) rightValue);
-            //TODO: if needed, can add more attributes here such as TIME
-            default:
-                return 0;
-        }
+        return curBatch.get(tupleIdxInBatch);
     }
 
 
-//    public static void main(String[] args) {
-//        //node is the query plan
-//        Operator node = null;
-//        int numOfBuff = 3;
-//        SortMergeJoin smj = new SortMergeJoin((Join) node);
-//
-//        //external merge sort for left batch
-//        //List<Attribute> leftAttrs = new ArrayList<>();
-//        //leftAttrs.add(smj.getCondition().getLhs());
-//        //smj.setLeft(new externalMergeSort(left, leftAttrs, numOfBuff));
-//        //external merge sort for right batch
-//        //List<Attribute> rightAttrs = new ArrayList<>();
-//        //rightAttrs.add((Attribute) smj.getCondition().getRhs());
-//        //smj.setRight(new externalMergeSort(right, rightAttrs, numOfBuff));
-//
-//        smj.setNumBuff(numOfBuff);
-//    }
+    @Override
+    public boolean close() {
+        if(leftBatch !=null) {
+            leftBatch.clear();
+        }
+        if(rightBuffer!=null) {
+            rightBuffer.clear();
+        }
+        if (CLEAN_FILES) {
+            for (File file: leftFiles) {
+                file.delete();
+            }
+            for (File file: rightFiles) {
+                file.delete();
+            }
+        }
+        return super.close();
+    }
+
+    //  helper functions of file read/write in the below....
+    private Batch readLBatch(int idx) throws IOException, ClassNotFoundException, IndexOutOfBoundsException {
+        if (idx == leftBatchIdx) {
+            return leftBatch;
+        }
+        File file = leftFiles.get(idx);
+        leftBatch = readBatchFromFile(file);
+        leftBatchIdx = idx;
+        return leftBatch;
+    }
+
+    private Batch readRBatch(int idx) throws IOException, ClassNotFoundException {
+        if (isInRBuffer(idx)) {
+            return readFromBuffer(idx);
+        }
+        if (idx < rBufferIdx || rightBufferSize == 0) {
+            if (rCurBufferIdx == idx) {
+                return rCurBuffer;
+            }
+            rCurBuffer = readBatchFromFile(rightFiles.get(idx));
+            rCurBufferIdx = idx;
+            return rCurBuffer;
+        }
+        while (!isInRBuffer(idx)) {
+            // move buffer
+            int nextRBatchToRead = rBufferIdx + rightBufferSize;
+            rightBuffer.remove(0);
+            Batch batch = readBatchFromFile(rightFiles.get(nextRBatchToRead));
+            rightBuffer.add(batch);
+            rBufferIdx++;
+        }
+        return readFromBuffer(idx);
+    }
+
+    private void initRBuffer() throws IOException, ClassNotFoundException {
+        rBufferIdx = 0;
+        rightBuffer.clear();
+        for (int i = 0; i < rightBufferSize; i++) {
+            if (i >= rightFiles.size()) {
+                break;
+            }
+            Batch batch = readBatchFromFile(rightFiles.get(i));
+            rightBuffer.add(batch);
+        }
+    }
+
+    private Batch readFromBuffer(int idx) {
+        return rightBuffer.get(idx - rBufferIdx);
+    }
+
+    private boolean isInRBuffer(int idx) {
+        return (rBufferIdx <= idx) && (idx < rBufferIdx + rightBufferSize);
+    }
 }
