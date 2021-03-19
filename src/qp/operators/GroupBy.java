@@ -52,8 +52,6 @@ public class GroupBy extends Operator {
 
     @Override
     public boolean open() {
-        System.out.println("GROUPBY CALLED OPEN");
-        System.out.println("GROUPBY:"+sortOn.size());
         isEOS = false;
         start = 0;
         prev = null;
@@ -63,20 +61,17 @@ public class GroupBy extends Operator {
 
         this.sortOnIndexList = new ArrayList<>();
         for(Attribute a : sortOn) {
-            if (schema == null) System.out.println("SCHEMA NULL");
             int index = schema.indexOf(a);
             sortOnIndexList.add(index);
         }
 
         if(!base.open()) {
-            System.out.println("Cannot open base from GROUPBY");
             System.exit(1);
         }
         return true;
     }
     @Override
     public Batch next() {
-        System.out.println("GROUPBY CALLED NEXT");
         int i;
         if (isEOS) {
             base.close();
@@ -90,11 +85,6 @@ public class GroupBy extends Operator {
             if (start == 0) {
                 incomingBatch = base.next();
 
-                if(incomingBatch != null) {
-                    System.out.println("Incoming batch");
-                    Debug.PPrint(incomingBatch);
-                }
-
                 if (incomingBatch == null) {
                     isEOS = true;
                     return outgoingBatch;
@@ -106,7 +96,6 @@ public class GroupBy extends Operator {
                 Tuple present = incomingBatch.get(i);
 
                 boolean t = prev == null || Tuple.compareTuples(prev, present, sortOnIndexList, sortOnIndexList) != 0;
-                System.out.println(t);
                 // If this is the first tuple read from the sorted batch/different from the last unique tuple present
                 if (t) {
                     outgoingBatch.add(present);
