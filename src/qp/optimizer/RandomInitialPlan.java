@@ -62,49 +62,47 @@ public class RandomInitialPlan {
             createJoinOp();
         }
 
-        int grouplistsize = sqlquery.getGroupByList().size();
-
         createProjectOp();
 
         // drop orderbylist if they dont appear in final attribute list
         orderbylist.retainAll(root.getSchema().getAttList());
+        // drop groupbylist if they dont appear in final attribute list
+        groupbylist.retainAll(root.getSchema().getAttList());
 
-        if(sqlquery.isDistinct() && orderbylist.size() == 0 && grouplistsize>0) {
-            // repopulate orderbylist using root attrs
-            orderbylist = sqlquery.getGroupByList(); //for sort operator
-            createSortOp(); //sort operator for groupby operator
+        if(sqlquery.isDistinct() && orderbylist.size() == 0 && groupbylist.size() >0) {
+            orderbylist = groupbylist;
+            createSortOp();
             createGroupbyOp();
-
+            createDistinctOp();
+        } else if (sqlquery.isDistinct() && orderbylist.size() > 0 && groupbylist.size() >0) {
+            ArrayList<Attribute> temp = orderbylist;
+            orderbylist = groupbylist;
+            createSortOp();
+            createGroupbyOp();
+            orderbylist = temp;
             createSortOp();
             createDistinctOp();
-        } else if (sqlquery.isDistinct() && orderbylist.size() > 0 && grouplistsize>0) {
-            orderbylist = sqlquery.getGroupByList(); //for sort operator
-            createSortOp(); //sort operator for groupby operator
-            createGroupbyOp();
-
+        } else if (!sqlquery.isDistinct() && orderbylist.size() == 0 && groupbylist.size() >0) {
+            orderbylist = groupbylist;
             createSortOp();
-            createDistinctOp();
-        } else if (!sqlquery.isDistinct() && orderbylist.size() == 0 && grouplistsize>0) {
-            // do nothing
-            orderbylist = sqlquery.getGroupByList(); //for sort operator
-            createSortOp();//sort operator for groupby operator
             createGroupbyOp();
-        } else if (!sqlquery.isDistinct() && orderbylist.size() > 0 && grouplistsize>0) {
-            orderbylist = sqlquery.getGroupByList(); //for sort operator
-            createSortOp(); //sort operator for groupby operator
-            createGroupbyOp();
-
+        } else if (!sqlquery.isDistinct() && orderbylist.size() > 0 && groupbylist.size() >0) {
+            ArrayList<Attribute> temp = orderbylist;
+            orderbylist = groupbylist;
             createSortOp();
-        } else if(sqlquery.isDistinct() && orderbylist.size() == 0 && grouplistsize==0) {
+            createGroupbyOp();
+            orderbylist = temp;
+            createSortOp();
+        } else if(sqlquery.isDistinct() && orderbylist.size() == 0 && groupbylist.size() ==0) {
             orderbylist = root.getSchema().getAttList(); // repopulate orderbylist using root attrs
             createSortOp();
             createDistinctOp();
-        } else if (sqlquery.isDistinct() && orderbylist.size() > 0 && grouplistsize==0) {
+        } else if (sqlquery.isDistinct() && orderbylist.size() > 0 && groupbylist.size() ==0) {
             createSortOp();
             createDistinctOp();
-        } else if (!sqlquery.isDistinct() && orderbylist.size() == 0 && grouplistsize==0) {
+        } else if (!sqlquery.isDistinct() && orderbylist.size() == 0 && groupbylist.size() ==0) {
             // do nothing
-        } else if (!sqlquery.isDistinct() && orderbylist.size() > 0 && grouplistsize==0) {
+        } else if (!sqlquery.isDistinct() && orderbylist.size() > 0 && groupbylist.size() ==0) {
             createSortOp();
         }
 
