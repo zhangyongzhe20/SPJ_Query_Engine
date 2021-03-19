@@ -80,6 +80,8 @@ public class PlanCost {
             return getStatistics((Sort) node);
         } else if (node.getOpType() == OpType.DISTINCT) {
             return getStatistics((Distinct) node);
+        } else if (node.getOpType() == OpType.GROUPBY) {
+            return getStatistics((GroupBy) node);
         }
         System.out.println("operator is not supported");
         isFeasible = false;
@@ -87,6 +89,9 @@ public class PlanCost {
     }
 
     protected long getStatistics(Distinct node) {
+        return calculateCost(node.getBase());
+    }
+    protected long getStatistics(GroupBy node) {
         return calculateCost(node.getBase());
     }
 
