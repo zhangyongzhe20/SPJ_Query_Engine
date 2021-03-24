@@ -64,14 +64,10 @@ public class RandomOptimizer {
                     return bnj;
                 case JoinType.SORTMERGE:
                     SortMergeJoin smj = new SortMergeJoin((Join) node);
-                    //TODO add Sort first, or get compile error
-                    ArrayList<Attribute> leftAttrs = new ArrayList<>();
-                    leftAttrs.add(smj.getCondition().getLhs());
-                    ArrayList<Attribute> rightAttrs = new ArrayList<>();
-                    rightAttrs.add((Attribute) smj.getCondition().getRhs());
-                    smj.setRight(new Sort(left, false, false, rightAttrs, OpType.SORT, BufferManager.getBuffersPerJoin())); // TODO smj.setRight(new Sort(right, rightAttrs, numbuff));
-
+                    smj.setLeft(left);
+                    smj.setRight(right);
                     smj.setNumBuff(numbuff);
+                    return smj;
 
                 default:
                     return node;
