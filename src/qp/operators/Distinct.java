@@ -91,7 +91,7 @@ public class Distinct extends Operator {
                 incomingBatch = base.next();
 
                 if(incomingBatch != null) {
-                    Debug.PPrint(incomingBatch);
+                    //Debug.PPrint(incomingBatch);
                 }
 
                 if (incomingBatch == null) {
