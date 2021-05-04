@@ -54,6 +54,6 @@ Run each join using the two possible plans, under the two join algorithms. Recor
 
 2. Experiment 2, suppose we would like to know the list of pilots who have been scheduled for a flight.  Should try out three different execution plans for this query (by restricting the join methods supported by the optimizer) and execute them with different join algorithms.
 
-In experimental write-up, include the timings, the plans used, and a discussion of the differences (if any) between timings on different algorithms and different plans.   Also discuss why query execution plan orderings can make a more significant difference in a real-world system with larger data sets.
+Experienced on query processing working in a “real” system, specifically focusing on a simple (Select-Project-Join) query engine. Implement different join algorithms such as block-nested loop (BNL) and sort-merge join. Compare different algorithms and different plans to demonstrate the query execution plan orderings can make a significant difference in a real-world system with large datasets.
 
 ## [Experimental Results](https://docs.google.com/document/d/1Djbe65YHOsSD56cEunUBW6Ow9LvOyD9BA6tzrDAW6bQ/edit?usp=sharing)
